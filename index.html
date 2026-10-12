@@ -91,7 +91,10 @@ function renderChart(cat){
   const h80lo=num(cat.hp80lo), h80hi=num(cat.hp80hi), h50lo=num(cat.hp50lo), h50hi=num(cat.hp50hi);
   const f80lo=h80lo.concat(num(cat.fdP10)), f80hi=h80hi.concat(num(cat.fdP90));
   const f50lo=h50lo.concat(num(cat.fdP25)), f50hi=h50hi.concat(num(cat.fdP75));
-  const fmid=num(cat.mpred).concat(num(cat.fdP50));
+  // 历史预测线尾部空位前向延续到今天（否则尾部 null 断线，未来段接不上今天）
+  const mraw=num(cat.mpred);
+  let _lv=null; const mfill=mraw.map(v=>{ if(v!=null)_lv=v; return _lv; });
+  const fmid=mfill.concat(num(cat.fdP50));
   const diff=(lo,hi)=>lo.map((v,k)=>(v==null||hi[k]==null)?null:+(hi[k]-v).toFixed(1));
   const closes = cat.closes.map(Number);
   let vMin=1e9,vMax=-1e9;
