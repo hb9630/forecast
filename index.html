@@ -44,7 +44,7 @@
   <!-- 记分牌 -->
   <section class="card rounded-xl p-4 shadow-sm">
     <h3 class="mb-3 text-base font-semibold">预测记分牌
-      <span class="text-[13px] font-normal opacity-70">（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日均价，兑现后误差以小字标出）</span></h3>
+      <span class="text-[13px] font-normal opacity-70">（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日收盘均价，误差由收盘对账）</span></h3>
     <div class="overflow-x-auto"><table class="w-full border-collapse text-[13px]">
       <thead><tr id="sbHead" class="border-b-2 border-gray-400/40 font-semibold opacity-80 text-left"></tr></thead>
       <tbody id="sbBody"></tbody>
@@ -127,13 +127,13 @@ function renderChart(cat){
         if(i<nH){
           let h=`<b>${cat.dates[i]}</b>`;
           const cl=get('收盘'); if(cl!=null)h+=`<br>实际收盘 ${fmt(cl)} 元/吨`;
-          const mp=get('月均价预测'); if(mp!=null)h+=`<br><span style="color:${PRED}">20日均价预测（当时）</span> ${fmt(mp)}`;
+          const mp=get('月均价预测'); if(mp!=null)h+=`<br><span style="color:${PRED}">20日收盘均价预测（当时）</span> ${fmt(mp)}`;
           return h;
         }
         const jx=i-nH;
         let h=`<b>${cat.fdDates[jx]} 预测</b>`;
         const m0=cat.mp20&&cat.mp20[i]!=null?cat.mp20[i]:null;
-        if(m0!=null)h+=`<br><span style="color:${PRED}">未来20日月均价中枢 ${fmt(m0)}</span>`;
+        if(m0!=null)h+=`<br><span style="color:${PRED}">未来20日收盘均价中枢 ${fmt(m0)}</span>`;
         h+=`<br>日价格中枢 ${fmt(cat.fdP50[jx])}<br>80% 区间 ${fmt(cat.fdP10[jx])}–${fmt(cat.fdP90[jx])}<br>50% 区间 ${fmt(cat.fdP25[jx])}–${fmt(cat.fdP75[jx])}`;
         return h;
       }},
