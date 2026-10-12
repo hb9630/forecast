@@ -15,6 +15,12 @@
   .dark .card { background:#161d2b; border-color:#2a3444; }
   html:not(.dark) .card { background:#fcfcfb; border-color:#dcdad3; }
   .card { border-width:1px; }
+  @media (max-width: 640px) {
+    body { font-size: 13px; }
+    #chart { height: 340px !important; }
+    table { font-size: 12px; }
+    th, td { padding: 4px 8px !important; }
+  }
 </style>
 </head>
 <body class="min-h-screen">
@@ -150,7 +156,15 @@ function renderChart(cat){
           data:[{xAxis:nH-1,label:{formatter:'今天 '+cat.dates.at(-1).slice(5),color:txtC,fontSize:11,position:'insideEndTop'},
                  lineStyle:{color:txtC,type:'dashed',width:1}}]}},
     ]}, true);
-  window.addEventListener('resize',()=>chart.resize());
+  const fitMobile=()=>{ const m=window.innerWidth<640;
+    chart.setOption({grid:{left:m?42:56,right:m?10:16,top:m?36:30,bottom:m?54:64},
+      legend:{show:true,top:0,left:m?8:60,itemGap:m?8:14,itemWidth:m?14:22,
+        textStyle:{color:txtC,fontSize:m?10:11.5}},
+      xAxis:{axisLabel:{color:txtC,fontSize:m?9:11}},
+      yAxis:{axisLabel:{color:txtC,fontSize:m?9:11}}});
+    chart.resize(); };
+  fitMobile();
+  window.addEventListener('resize',()=>{fitMobile();});
 }
 
 /* ---------- 记分牌 ---------- */
