@@ -63,7 +63,7 @@ const errSpan = (e, th=1.5) => e==null ? '' :
   `<b class="ml-1 text-[11px]" style="color:${Math.abs(e)<th?'#22c55e':'#ef4444'}">${e>0?'+':''}${e.toFixed(2)}%</b>`;
 
 /* ---------- 数据 ---------- */
-async function j(url){ try{ const r = await fetch(url); return r.ok ? await r.json() : null; }catch(e){ return null; } }
+async function j(url){ try{ const r = await fetch(url + (url.includes(chr(63)) ? chr(38) : chr(63)) + "t=" + Date.now()); return r.ok ? await r.json() : null; }catch(e){ return null; } }
 const isGH = location.host.endsWith('github.io');
 
 /* ---------- 统计格 ---------- */
