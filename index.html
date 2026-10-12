@@ -112,7 +112,7 @@ function renderChart(cat){
     xAxis:{type:'category',data:allD,axisLabel:{color:txtC,fontSize:11,formatter:v=>v.slice(2,7)}},
     yAxis:{type:'value',min:Y0,max:Y1,splitNumber:5,axisLabel:{color:txtC,fontSize:11},splitLine:{lineStyle:{color:gridC}}},
     legend:{show:true,top:2,left:60,itemGap:14,itemWidth:22,textStyle:{color:txtC,fontSize:11.5},
-      data:['收盘','日度预测（AR5 参照）','月均价预测','80%区间','50%区间']},
+      data:['收盘','月均价预测','80%区间','50%区间']},
     tooltip:{trigger:'axis',axisPointer:{type:'cross'},backgroundColor:isDark()?'#1e293bf2':'#fffffff2',
       borderColor:'#475569',textStyle:{color:isDark()?'#e2e8f0':'#0f172a',fontSize:12},
       formatter(ps){
@@ -121,7 +121,6 @@ function renderChart(cat){
         if(i<nH){
           let h=`<b>${cat.dates[i]}</b>`;
           const cl=get('收盘'); if(cl!=null)h+=`<br>实际收盘 ${fmt(cl)} 元/吨`;
-          const dp=get('日度预测（AR5 参照）'); if(dp!=null&&cl!=null)h+=`<br><span style="color:${DAILY}">日度预测 ${fmt(dp)}</span>（偏差 ${dp>cl?'+':''}${(dp-cl).toFixed(0)}）`;
           const mp=get('月均价预测'); if(mp!=null)h+=`<br><span style="color:${PRED}">20日均价预测（当时）</span> ${fmt(mp)}`;
           return h;
         }
@@ -146,7 +145,6 @@ function renderChart(cat){
           label:{color:'#fbbf24',fontSize:11,distance:8},
           data:[{coord:[mi,closes[mi]],value:fmt(closes[mi]),label:{position:'top',formatter:'阶段高点 {c}'}},
                 {coord:[ni,closes[ni]],value:fmt(closes[ni]),label:{position:'bottom',formatter:'阶段低点 {c}'}}]}},
-      {name:'日度预测（AR5 参照）',type:'line',data:cat.dpred,symbol:'none',color:DAILY,lineStyle:{color:DAILY,width:1},z:6},
       {name:'月均价预测',type:'line',data:fmid,symbol:'none',color:PRED,lineStyle:{color:PRED,width:1.3},z:6,
         markLine:{symbol:'none',silent:true,
           data:[{xAxis:nH-1,label:{formatter:'今天 '+cat.dates.at(-1).slice(5),color:txtC,fontSize:11,position:'insideEndTop'},
