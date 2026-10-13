@@ -151,7 +151,9 @@ function renderChart(cat){
           label:{color:'#fbbf24',fontSize:11,distance:8},
           data:[{coord:[mi,closes[mi]],value:fmt(closes[mi]),label:{position:'top',formatter:'阶段高点 {c}'}},
                 {coord:[ni,closes[ni]],value:fmt(closes[ni]),label:{position:'bottom',formatter:'阶段低点 {c}'}}]}},
-      {name:'月均价预测',type:'line',data:fmid,symbol:'none',color:PRED,lineStyle:{color:PRED,width:1.3},z:6,
+      {name:'月均价预测',type:'line',data:fmid,symbol:'none',color:PRED,lineStyle:{color:PRED,width:1.3},z:6},
+      // "今天"竖线挂独立辅助线（不进图例，点图例开关不连带消失）
+      {name:'今日线',type:'line',data:[],symbol:'none',silent:true,z:4,
         markLine:{symbol:'none',silent:true,
           data:[{xAxis:nH-1,label:{formatter:'今天 '+cat.dates.at(-1).slice(5),color:txtC,fontSize:11,position:'insideEndTop'},
                  lineStyle:{color:txtC,type:'dashed',width:1}}]}},
@@ -209,7 +211,7 @@ function intraday(rt){
       else if(['80带底','80%区间','50带底','50%区间'].includes(s.name))s.data.push(null);
     });
     opt.dataZoom.forEach(z=>z.endValue=xd.length-1);
-    opt.series.forEach(s=>{ if(s.name==='月均价预测'&&s.markLine?.data?.[0]){
+    opt.series.forEach(s=>{ if(s.name==='今日线'&&s.markLine?.data?.[0]){
       s.markLine.data[0].xAxis=xd.length-1;
       s.markLine.data[0].label={formatter:'今天 '+today.slice(5),color:'#94a3b8',position:'insideEndTop'};}});
     chart.setOption(opt);
