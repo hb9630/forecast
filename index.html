@@ -107,6 +107,10 @@ function renderChart(cat){
   [closes,f80hi,f80lo].forEach(a=>a.forEach(v=>{if(v!=null){vMin=Math.min(vMin,v);vMax=Math.max(vMax,v);}}));
   const Y0=Math.floor((vMin-25)/50)*50, Y1=Math.ceil((vMax+25)/50)*50;
   let mi=0,ni=0; closes.forEach((v,z)=>{if(v>closes[mi])mi=z;if(v<closes[ni])ni=z;});
+  // "今天"竖线优先挂真实今天：当日收盘链 16:35 后才把当日收进 dates，盘中真今天已在 fdDates 段；
+  // 挂不到（周末/节假日不在轴上）退回最后历史点，标签改叫"最新"避免误导
+  const _td=new Date().toISOString().slice(0,10), _ti=allD.indexOf(_td);
+  const tlX=_ti>=0?_ti:nH-1, tlL=(_ti>=0?'今天 ':'最新 ')+(_ti>=0?_td:cat.dates.at(-1)).slice(5);
   const BLUE='#4aa3ff', PRED='#2ee6a8', DAILY='#22d3ee';
   const gridC = isDark() ? 'rgba(128,140,155,.25)' : 'rgba(128,140,155,.35)';
   const txtC = isDark() ? '#94a3b8' : '#475569';
@@ -155,7 +159,7 @@ function renderChart(cat){
       // "今天"竖线挂独立辅助线（不进图例，点图例开关不连带消失）
       {name:'今日线',type:'line',data:[],symbol:'none',silent:true,z:4,
         markLine:{symbol:'none',silent:true,
-          data:[{xAxis:nH-1,label:{formatter:'今天 '+cat.dates.at(-1).slice(5),color:txtC,fontSize:11,position:'insideEndTop'},
+          data:[{xAxis:tlX,label:{formatter:tlL,color:txtC,fontSize:11,position:'insideEndTop'},
                  lineStyle:{color:txtC,type:'dashed',width:1}}]}},
     ]}, true);
   const fitMobile=()=>{ const m=window.innerWidth<640;
