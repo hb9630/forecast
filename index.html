@@ -192,7 +192,7 @@ function renderBoard(data, rt){
     const hl=(i===0&&!showRt)?'style="background:rgba(74,163,255,.10);box-shadow:inset 3px 0 0 #4aa3ff"':'';
     return `<tr ${hl}>${td(r.date)}${td(fmt(r.open),'text-right')}${td(fmt(r.close),'text-right font-semibold')}
       ${td(`<b>${fmt(r.d2?.pred)}</b>${errSpan(r.d2?.err)}`,'text-right')}
-      ${td(`<b>${fmt(r.m?.pred)}</b>${r.m?.lo80!=null?`<span class="ml-1 text-[11px] opacity-60">[${r.m.lo80}–${r.m.hi80}]</span>`:''}${errSpan(r.m?.err,2)}`,'text-right')}</tr>`;
+      ${td(`<b>${fmt(r.m?.pred)}</b>${r.m?.lo80!=null?`<span class="ml-1 text-[11px] opacity-60">[${r.m.lo80}–${r.m.hi80}]</span>`:''}${r.m?.err==null&&r.m?.prog!=null?`<span class="ml-1 text-[11px] opacity-50">进行中 ${r.m.prog}/20 天</span>`:''}${errSpan(r.m?.err,2)}`,'text-right')}</tr>`;
   }).join('');
   document.getElementById('sbBody').innerHTML=html;
   document.getElementById('sbFoot').innerHTML=`<tr class="border-t-2 border-gray-400/40 font-bold text-[12px]" style="background:rgba(128,140,155,.12)">
