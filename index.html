@@ -32,9 +32,6 @@
     <button id="themeBtn" onclick="toggleTheme()" class="rounded-lg border border-gray-400/40 px-3 py-1.5 text-sm">☀️ 浅色</button>
   </header>
 
-  <!-- 统计三格 -->
-  <div id="stats" class="grid grid-cols-1 gap-3 md:grid-cols-3"></div>
-
   <!-- 主图 -->
   <section class="card rounded-xl p-4 shadow-sm">
     <h3 class="mb-3 text-base font-semibold">玉米主连日收盘：近 300 日真实走势 + 未来 120 日预测中心与 80%/50% 区间</h3>
@@ -71,22 +68,6 @@ const errSpan = (e, th=1.5) => e==null ? '' :
 /* ---------- 数据 ---------- */
 async function j(url){ try{ const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now()); return r.ok ? await r.json() : null; }catch(e){ return null; } }
 const isGH = location.host.endsWith('github.io');
-
-/* ---------- 统计格 ---------- */
-function renderStats(cat){
-  const lastD = cat.dates.at(-1);
-  const fdm = {}; cat.fdDates.forEach((d,i)=>{ const m=d.slice(0,7); if(!(m in fdm)) fdm[m]=i; });
-  const months = Object.keys(fdm).sort();
-  const iN = fdm[months[0]], iQ = fdm[months[Math.min(2,months.length-1)]];
-  document.getElementById('stats').innerHTML = [
-    ['期货最新收盘（实际）', fmt(cat.lastClose)+' <span class="text-[13px] font-normal">元/吨</span>', lastD+' · 主连收盘', '#4aa3ff'],
-    [`下月预测中枢（${months[0]}）`, fmt(cat.fdP50[iN]), `80% 区间 ${fmt(cat.fdP10[iN])}–${fmt(cat.fdP90[iN])}`, '#2ee6a8'],
-    [`季度末中枢（${months[2]||months[1]}）`, fmt(cat.fdP50[iQ]), `80% 区间 ${fmt(cat.fdP10[iQ])}–${fmt(cat.fdP90[iQ])}`, '#2ee6a8'],
-  ].map(s=>`<div class="card rounded-xl p-3 shadow-sm">
-      <div class="text-[11px] opacity-60">${s[0]}</div>
-      <div class="text-xl font-bold" style="color:${s[3]}">${s[1]}</div>
-      <div class="text-[11px] opacity-60">${s[2]}</div></div>`).join('');
-}
 
 /* ---------- 主图（ECharts，同 React 版口径） ---------- */
 function renderChart(cat){
@@ -226,7 +207,7 @@ function intraday(rt){
 (async()=>{
   const cats = await j('cats_v2.json');
   const cat = (cats||[]).find(c=>c.code==='C');
-  if(cat){ renderStats(cat); renderChart(cat); }
+  if(cat){ renderChart(cat); }
   const board = await j('scoreboard.json');
   const rt = isGH ? null : await j('rt.json');
   renderBoard(board, rt);
