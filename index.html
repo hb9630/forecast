@@ -64,9 +64,6 @@ function toggleTheme(){
 const fmt = v => (v == null || isNaN(v)) ? '—' : Math.round(v).toLocaleString();
 const errSpan = e => e==null ? '' :
   `<b class="ml-1 text-[11px]" style="color:${e>0?'#ef4444':'#22c55e'}">${e>0?'+':''}${e.toFixed(2)}%</b>`;
-// 页脚汇总=绝对误差均值（无符号），按页脚明示的基准着色：低于基准绿、超出红
-const smSpan = (n, v, base) => (n && v!=null) ?
-  `<span style="color:${v<base?'#22c55e':'#ef4444'}">${n} 笔 ${v}%</span>` : '';
 
 /* ---------- 数据 ---------- */
 async function j(url){ try{ const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now()); return r.ok ? await r.json() : null; }catch(e){ return null; } }
@@ -181,8 +178,8 @@ function renderBoard(data, rt){
   document.getElementById('sbBody').innerHTML=html;
   document.getElementById('sbFoot').innerHTML=`<tr class="border-t-2 border-gray-400/40 font-bold text-[12px]" style="background:rgba(128,140,155,.12)">
     <td class="px-2.5 py-1.5" colspan="3">已兑现平均误差（基准：日度~1%·月度 0.85%）</td>
-    <td class="px-2.5 py-1.5 text-right">${smSpan(sm.nD, sm.maeD, 1)}</td>
-    <td class="px-2.5 py-1.5 text-right">${smSpan(sm.nM, sm.maeM, 0.85)}</td></tr>`;
+    <td class="px-2.5 py-1.5 text-right">${sm.nD?`${sm.nD} 笔 ${sm.maeD}%`:''}</td>
+    <td class="px-2.5 py-1.5 text-right">${sm.nM?`${sm.nM} 笔 ${sm.maeM}%`:''}</td></tr>`;
 }
 
 /* ---------- 盘中续点（仅内网版） ---------- */
