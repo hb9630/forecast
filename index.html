@@ -21,10 +21,25 @@
     table { font-size: 12px; }
     th, td { padding: 4px 8px !important; }
   }
+  /* 桌面一屏：整页不滚，图/表分区占满，表内数据滚（小屏保持整页滚动） */
+  @media (min-width: 641px) {
+    html, body { height: 100%; overflow: hidden; }
+    #wrap { height: 100vh; display: flex; flex-direction: column; }
+    #chartSec { flex: 1.7; min-height: 0; display: flex; flex-direction: column; }
+    #chart { flex: 1; min-height: 0; }
+    #sbSec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    #sbWrap { flex: 1; min-height: 0; overflow: auto; }
+    #sbWrap thead th { position: sticky; top: 0; z-index: 1; }
+    .dark #sbWrap thead th { background: #161d2b; }
+    html:not(.dark) #sbWrap thead th { background: #fcfcfb; }
+    #sbWrap tfoot td { position: sticky; bottom: 0; }
+    .dark #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#161d2b; }
+    html:not(.dark) #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#fcfcfb; }
+  }
 </style>
 </head>
 <body class="min-h-screen">
-<div class="mx-auto max-w-[1400px] space-y-4 p-4">
+<div id="wrap" class="mx-auto max-w-[1400px] space-y-4 p-4">
 
   <header class="flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-xl font-bold">玉米120天价格预测
@@ -33,15 +48,15 @@
   </header>
 
   <!-- 主图 -->
-  <section class="card rounded-xl p-4 shadow-sm">
-    <div id="chart" style="height:460px"></div>
+  <section id="chartSec" class="card rounded-xl p-4 shadow-sm">
+    <div id="chart"></div>
   </section>
 
   <!-- 记分牌 -->
-  <section class="card rounded-xl p-4 shadow-sm">
+  <section id="sbSec" class="card rounded-xl p-4 shadow-sm">
     <h3 class="mb-3 text-base font-semibold">预测记分牌
       <span class="text-[13px] font-normal opacity-70">（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日收盘均价，误差由收盘对账）</span></h3>
-    <div class="overflow-x-auto"><table class="w-full border-collapse text-[13px]">
+    <div id="sbWrap"><table class="w-full border-collapse text-[13px]">
       <thead><tr id="sbHead" class="border-b-2 border-gray-400/40 font-semibold opacity-80 text-left"></tr></thead>
       <tbody id="sbBody"></tbody>
       <tfoot id="sbFoot"></tfoot>
