@@ -87,6 +87,15 @@ function toggleTheme(){
   const bar = document.getElementById('dragbar');
   const cs = document.getElementById('chartSec'), sb = document.getElementById('sbSec');
   if(!bar || !cs || !sb) return;
+  // 恢复上次拖拽的占比（存比例，跨屏高有效；双击重置时清除）
+  const KEY = 'fsSplit';
+  const save = () => { const t = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
+    if(t > 0) try { localStorage.setItem(KEY, (cs.getBoundingClientRect().height / t).toFixed(3)); } catch(e){} };
+  try { const r = parseFloat(localStorage.getItem(KEY));
+    if(r > 0.1 && r < 0.9) {
+      const t = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
+      cs.style.flex = `0 0 ${Math.round(r * t)}px`; sb.style.flex = '1';
+    } } catch(e){}
   let drag = null;
   bar.addEventListener('pointerdown', e => {
     if(window.innerWidth < 641) return;
@@ -102,12 +111,13 @@ function toggleTheme(){
     cs.style.flex = `0 0 ${h}px`; sb.style.flex = '1';
     if(window._chart) window._chart.resize();
   });
-  const end = () => { if(drag){ drag = null; bar.classList.remove('on');
+  const end = () => { if(drag){ drag = null; bar.classList.remove('on'); save();
     if(window._chart) window._chart.resize(); } };
   bar.addEventListener('pointerup', end);
   bar.addEventListener('pointercancel', end);
   bar.addEventListener('dblclick', () => {
     cs.style.flex = ''; sb.style.flex = '';
+    try { localStorage.removeItem(KEY); } catch(e){}
     if(window._chart) window._chart.resize();
   });
 })();
