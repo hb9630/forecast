@@ -36,6 +36,12 @@
     .dark #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#161d2b; }
     html:not(.dark) #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#fcfcfb; }
   }
+  @media (max-width: 640px) { #dragbar { display: none; } }
+  #dragbar { flex: none; height: 14px; margin: -5px 0; cursor: row-resize;
+    display: flex; align-items: center; justify-content: center; touch-action: none; z-index: 5; }
+  #dragbar::after { content: ''; width: 72px; height: 4px; border-radius: 2px;
+    background: rgba(128,140,155,.4); transition: background .15s; }
+  #dragbar:hover::after, #dragbar.on::after { background: #4aa3ff; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -51,6 +57,8 @@
   <section id="chartSec" class="card rounded-xl p-4 shadow-sm">
     <div id="chart"></div>
   </section>
+
+  <div id="dragbar" title="拖动调整图/表占比 · 双击恢复对半"></div>
 
   <!-- 记分牌 -->
   <section id="sbSec" class="card rounded-xl p-4 shadow-sm">
@@ -74,6 +82,36 @@ function toggleTheme(){
   document.getElementById('themeBtn').textContent = isDark() ? '☀️ 浅色' : '🌙 深色';
   if (window._chart) renderChart(window._cat);
 }
+/* ---------- 图/表高度拖拽分隔条（桌面；双击恢复对半） ---------- */
+(function(){
+  const bar = document.getElementById('dragbar');
+  const cs = document.getElementById('chartSec'), sb = document.getElementById('sbSec');
+  if(!bar || !cs || !sb) return;
+  let drag = null;
+  bar.addEventListener('pointerdown', e => {
+    if(window.innerWidth < 641) return;
+    drag = { y: e.clientY, ch: cs.getBoundingClientRect().height };
+    bar.classList.add('on');
+    bar.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  bar.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const total = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
+    const h = Math.min(Math.max(drag.ch + (e.clientY - drag.y), 140), total - 140);
+    cs.style.flex = `0 0 ${h}px`; sb.style.flex = '1';
+    if(window._chart) window._chart.resize();
+  });
+  const end = () => { if(drag){ drag = null; bar.classList.remove('on');
+    if(window._chart) window._chart.resize(); } };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+  bar.addEventListener('dblclick', () => {
+    cs.style.flex = ''; sb.style.flex = '';
+    if(window._chart) window._chart.resize();
+  });
+})();
+
 /* ---------- 工具 ---------- */
 const fmt = v => (v == null || isNaN(v)) ? '—' : Math.round(v).toLocaleString();
 const errSpan = e => e==null ? '' :
