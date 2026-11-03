@@ -29,9 +29,13 @@
     #chart { flex: 1; min-height: 0; }
     #sbSec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     #sbWrap { flex: 1; min-height: 0; overflow: auto; }
-    #sbWrap thead th { position: sticky; top: 0; z-index: 1; }
-    .dark #sbWrap thead th { background: #161d2b; }
-    html:not(.dark) #sbWrap thead th { background: #fcfcfb; }
+    /* border-collapse:collapse 下 sticky 表头背景会被滚动内容透出（Chrome 实锤），
+       改 separate+零边距，视觉不变，表头实底可靠遮住滚过的行 */
+    #sbWrap table { border-collapse: separate; border-spacing: 0; }
+    #sbWrap thead th { position: sticky; top: 0; z-index: 2;
+      box-shadow: inset 0 -2px 0 rgba(128,140,155,.55); }
+    .dark #sbWrap thead th { background: #161d2b; color: rgba(230,235,242,.8); }
+    html:not(.dark) #sbWrap thead th { background: #fcfcfb; color: rgba(11,11,11,.8); }
     #sbWrap tfoot td { position: sticky; bottom: 0; }
     .dark #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#161d2b; }
     html:not(.dark) #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#fcfcfb; }
@@ -64,8 +68,8 @@
   <section id="sbSec" class="card rounded-xl p-4 shadow-sm">
     <h3 class="mb-3 text-base font-semibold">预测记分牌
       <span class="text-[13px] font-normal opacity-70">（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日收盘均价，误差由收盘对账）</span></h3>
-    <div id="sbWrap"><table class="w-full border-collapse text-[13px]">
-      <thead><tr id="sbHead" class="border-b-2 border-gray-400/40 font-semibold opacity-80 text-left"></tr></thead>
+    <div id="sbWrap"><table class="w-full text-[13px]">
+      <thead><tr id="sbHead" class="font-semibold text-left"></tr></thead>
       <tbody id="sbBody"></tbody>
       <tfoot id="sbFoot"></tfoot>
     </table></div>
