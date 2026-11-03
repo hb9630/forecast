@@ -132,6 +132,10 @@ async function j(url){ try{ const r = await fetch(url + (url.includes("?") ? "&"
 const isGH = location.host.endsWith('github.io');
 
 /* ---------- 主图（ECharts，同 React 版口径） ---------- */
+/* x 轴标签随缩放分级：窗口>150 点=年-月，>50 点=月-日，更深=年-月-日（2026-11-03 用户令） */
+window._zx = [0, 1e9];
+const xAxisFmt = v => { const s = window._zx[1] - window._zx[0];
+  return s > 150 ? v.slice(2,7) : (s > 50 ? v.slice(5) : v); };
 function renderChart(cat){
   const nH = cat.dates.length, NFd = cat.fdDates.length;
   const CUT = Math.max(0, nH - 300);
@@ -162,7 +166,7 @@ function renderChart(cat){
   chart.setOption({
     animation:false,
     grid:{left:56,right:16,top:30,bottom:64},
-    xAxis:{type:'category',data:allD,axisLabel:{color:txtC,fontSize:11,formatter:v=>v.slice(2,7)}},
+    xAxis:{type:'category',data:allD,axisLabel:{color:txtC,fontSize:11,formatter:xAxisFmt}},
     yAxis:{type:'value',min:Y0,max:Y1,splitNumber:5,axisLabel:{color:txtC,fontSize:11},splitLine:{lineStyle:{color:gridC}}},
     legend:{show:true,top:2,left:60,itemGap:14,itemWidth:22,textStyle:{color:txtC,fontSize:11.5},
       data:['收盘','月均价预测','80%区间','50%区间']},
@@ -205,6 +209,13 @@ function renderChart(cat){
           data:[{xAxis:tlX,label:{formatter:tlL,color:txtC,fontSize:11,position:'insideEndTop'},
                  lineStyle:{color:txtC,type:'dashed',width:1}}]}},
     ]}, true);
+  // 缩放时按窗口大小切换 x 轴标签粒度（off 防主题切换重入时叠加监听）
+  window._zx = [CUT, nH + NFd - 1];
+  chart.off('datazoom').on('datazoom', () => {
+    const o = (chart.getOption().dataZoom || [])[0] || {};
+    window._zx = [o.startValue ?? 0, o.endValue ?? 1e9];
+    chart.setOption({xAxis:[{axisLabel:{formatter:xAxisFmt}}]});
+  });
   const fitMobile=()=>{ const m=window.innerWidth<640;
     chart.setOption({grid:{left:m?42:56,right:m?10:16,top:m?36:30,bottom:m?54:64},
       legend:{show:true,top:0,left:m?8:60,itemGap:m?8:14,itemWidth:m?14:22,
