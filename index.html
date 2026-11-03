@@ -225,24 +225,26 @@ function renderBoard(data, rt){
   const showRt = fresh && rows.length>0 && rows[0].date<today;
   document.getElementById('sbHead').innerHTML =
     `<th class="px-2.5 py-1.5">日期</th><th class="px-2.5 py-1.5 text-right">开盘</th><th class="px-2.5 py-1.5 text-right">收盘</th>
-     <th class="px-2.5 py-1.5 text-right">次日预测</th><th class="px-2.5 py-1.5 text-right">月预测</th>`;
+     <th class="px-2.5 py-1.5 text-right">次日预测</th><th class="px-2.5 py-1.5 text-right">月预测</th>
+     <th class="px-2.5 py-1.5 text-right">80%区间</th><th class="px-2.5 py-1.5 text-right">月误差</th>`;
   const td=(v,right='',cls='')=>`<td class="px-2.5 py-1.5 whitespace-nowrap ${right} ${cls}">${v}</td>`;
   let html='';
   if(showRt) html+=`<tr style="background:var(--tw-shadow,rgba(128,140,155,.15));box-shadow:inset 3px 0 0 #f59e0b">
     ${td(today+'<span class="ml-1 text-[11px] opacity-60">盘中</span>')}${td(fmt(rt.open),'text-right')}${td(fmt(rt.last),'text-right font-semibold')}
-    ${td('收盘后','text-right opacity-50')}${td('收盘后','text-right opacity-50')}</tr>`;
+    ${td('收盘后','text-right opacity-50')}${td('收盘后','text-right opacity-50')}${td('','text-right')}${td('收盘后','text-right opacity-50')}</tr>`;
   html+=rows.map((r,i)=>{
     const hl=(i===0&&!showRt)?'style="background:rgba(74,163,255,.10);box-shadow:inset 3px 0 0 #4aa3ff"':'';
     return `<tr ${hl}>${td(r.date)}${td(fmt(r.open),'text-right')}${td(fmt(r.close),'text-right font-semibold')}
       ${td(`<b>${fmt(r.d2?.pred)}</b>${errSpan(r.d2?.err)}`,'text-right')}
-      ${td(`<b>${fmt(r.m?.pred)}</b>${errSpan(r.m?.err)}
-            <div class="text-[11px] leading-tight ${r.m?.err==null?'opacity-50':'opacity-60'}">${r.m?.lo80!=null?`[${r.m.lo80}–${r.m.hi80}]`:''}${r.m?.err==null&&r.m?.prog!=null?` 进行中 ${r.m.prog}/20 天`:''}</div>`,'text-right')}</tr>`;
+      ${td(`<b>${fmt(r.m?.pred)}</b>`,'text-right')}
+      ${td(r.m?.lo80!=null?`${r.m.lo80}–${r.m.hi80}`:'','text-right text-[11px] opacity-60 whitespace-nowrap')}
+      ${td(r.m?.err!=null?errSpan(r.m?.err):(r.m?.prog!=null?`<span class="text-[11px] opacity-50">进行中 ${r.m.prog}/20</span>`:''),'text-right')}</tr>`;
   }).join('');
   document.getElementById('sbBody').innerHTML=html;
   document.getElementById('sbFoot').innerHTML=`<tr class="border-t-2 border-gray-400/40 font-bold text-[12px]" style="background:rgba(128,140,155,.12)">
     <td class="px-2.5 py-1.5" colspan="3">已兑现平均误差（基准：日度~1%·月度 0.85%）</td>
     <td class="px-2.5 py-1.5 text-right">${sm.nD?`${sm.nD} 笔 ${sm.maeD}%`:''}</td>
-    <td class="px-2.5 py-1.5 text-right">${sm.nM?`${sm.nM} 笔 ${sm.maeM}%`:''}</td></tr>`;
+    <td class="px-2.5 py-1.5 text-right" colspan="3">${sm.nM?`${sm.nM} 笔 ${sm.maeM}%`:''}</td></tr>`;
 }
 
 /* ---------- 盘中续点（仅内网版） ---------- */
