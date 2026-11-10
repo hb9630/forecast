@@ -76,8 +76,8 @@
     </table></div>
   </section>
 
-  <!-- 多品种月度预测（2026-11-10 起：成熟一个并入一个，每品类一个 block；小麦数据源攻关中） -->
-  <section id="multiSec" class="card rounded-xl p-4 shadow-sm">
+  <!-- 多品种月度预测（2026-11-10 起：成熟一个并入一个，每品类独立一张卡片；小麦数据源攻关中） -->
+  <section id="multiSec">
     <h3 class="mb-2 text-base font-semibold">多品种月度预测
       <span class="text-[13px] font-normal opacity-70">（v3g 引擎 · 3 年滚动回放 76 决策点 + 每日实盘 ·
         <a class="underline decoration-dotted" href="multi/index.html">完整记分牌↗</a>）</span></h3>
@@ -362,6 +362,7 @@ function intraday(rt){
     if (!el){
       el = document.createElement('div');
       el.id = 'mb_'+code;
+      el.className = 'card rounded-xl p-4 shadow-sm';
       el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px">
           <b>${cfg.name}</b><span style="font-size:11.5px;opacity:.6">${cfg.exch}</span>
           <span id="mbrt_${code}" style="margin-left:auto;font-size:12.5px" class="whitespace-nowrap"></span></div>
