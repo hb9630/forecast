@@ -86,12 +86,12 @@
 
 <script>
 const SYMS = {
-  M: {name:'豆粕', exch:'大商所 M 主连'},
-  A: {name:'豆一', exch:'大商所 A 主连'},
+  M: {name:'豆粕', exch:'大商所 M 主连 · 大豆榨油副产品（饲料）'},
+  A: {name:'大豆', exch:'大商所 A 主连（黄大豆1号·国产豆）'},
   L: {name:'生猪', exch:'大商所 LH 主连'},
   W: {name:'小麦', exch:'郑商所 WH · 数据源攻关中', disabled:true},
 };
-let cur = 'M', RNG = '1Y';
+let cur = 'M', RNG = '3Y';
 const chart = echarts.init(document.getElementById('chart'), null, {renderer:'canvas'});
 const $ = id => document.getElementById(id);
 const D = (x, d=1) => x==null ? '—' : (+x).toFixed(d);
@@ -218,7 +218,7 @@ for (const [code,cfg] of Object.entries(SYMS)){
 const rngEl = $('ranges');
 for (const r of ['6M','1Y','3Y','ALL']){
   const b = document.createElement('button');
-  b.className = 'rng' + (r===RNG?' on':''); b.textContent = r;
+  b.className = 'rng' + (r===RNG?' on':''); b.textContent = r==='3Y' ? '3年' : r;
   b.onclick = ()=>{ RNG = r; rngEl.querySelectorAll('.rng').forEach(x=>x.classList.toggle('on',x===b)); refresh(); };
   rngEl.appendChild(b);
 }
