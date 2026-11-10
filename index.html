@@ -23,12 +23,13 @@
   }
   /* 桌面一屏：整页不滚，图/表分区占满，表内数据滚（小屏保持整页滚动） */
   @media (min-width: 641px) {
-    html, body { height: 100%; overflow: hidden; }
-    #wrap { height: 100vh; display: flex; flex-direction: column; }
-    #chartSec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* 2026-11-10 多品种区并入：恢复整页滚动（原一屏不滚布局），玉米图/表仍占首屏主体 */
+    html, body { height: auto; overflow: auto; }
+    #wrap { min-height: 100vh; display: flex; flex-direction: column; }
+    #chartSec { flex: 1 1 36vh; min-height: 280px; display: flex; flex-direction: column; }
     #chart { flex: 1; min-height: 0; }
-    #sbSec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-    #sbWrap { flex: 1; min-height: 0; overflow: auto; }
+    #sbSec { flex: 1 1 32vh; min-height: 240px; display: flex; flex-direction: column; }
+    #sbWrap { flex: 1; min-height: 0; overflow: auto; max-height: 44vh; }
     /* border-collapse:collapse 下 sticky 表头背景会被滚动内容透出（Chrome 实锤），
        改 separate+零边距，视觉不变，表头实底可靠遮住滚过的行 */
     #sbWrap table { border-collapse: separate; border-spacing: 0; }
@@ -73,6 +74,14 @@
       <tbody id="sbBody"></tbody>
       <tfoot id="sbFoot"></tfoot>
     </table></div>
+  </section>
+
+  <!-- 多品种月度预测（2026-11-10 起：成熟一个并入一个，每品类一个 block；小麦数据源攻关中） -->
+  <section id="multiSec" class="card rounded-xl p-4 shadow-sm">
+    <h3 class="mb-2 text-base font-semibold">多品种月度预测
+      <span class="text-[13px] font-normal opacity-70">（v3g 引擎 · 3 年滚动回放 76 决策点 + 每日实盘 ·
+        <a class="underline decoration-dotted" href="multi/index.html">完整记分牌↗</a>）</span></h3>
+    <div id="mBlocks" style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"></div>
   </section>
 
   <footer class="pb-6 text-center text-[12px] opacity-50">玉米价格预测 · 数据=大商所公开行情与免费公开源 · 引擎 v23+v31 · 2026-10-12</footer>
@@ -293,6 +302,123 @@ function intraday(rt){
   renderBoard(board, rt);
   if(!isGH) setInterval(async()=>{ const r=await j('rt.json'); intraday(r); renderBoard(board,r); }, 300000);
 })();
+</script>
+
+<script>
+/* ---------- 多品种 block（2026-11-10 起：成熟一个并入一个；原生渲染零依赖 React） ---------- */
+  const MSYMS = {
+    M: {name:'豆粕', exch:'大商所 M 主连'},
+    A: {name:'大豆', exch:'大商所 A 主连·黄大豆1号'},
+    L: {name:'生猪', exch:'大商所 LH 主连'},
+  };
+  window._mbCharts = {};
+  const mbCharts = window._mbCharts;
+
+  function mbChartOpt(code, price, rp20, sb){
+    const BLUE='#4aa3ff', PRED='#2ee6a8', PT='#f59e0b';
+    const gridC = isDark() ? 'rgba(128,140,155,.25)' : 'rgba(128,140,155,.35)';
+    const txtC = isDark() ? '#94a3b8' : '#475569';
+    const rows = (price && price.rows) || [];
+    const dates = rows.map(r=>r.date), closes = rows.map(r=>r.close);
+    const m20 = (rp20 && rp20.rows) || [];
+    const last = (sb.rows||[]).filter(r=>r.m && r.m.pred!=null).pop() || (m20.length ? {date:m20.at(-1).date, m:{pred:m20.at(-1).m_pred, lo80:m20.at(-1).lo80, hi80:m20.at(-1).hi80}} : null);
+    const opt = {
+      animation:false,
+      grid:{left:52,right:14,top:26,bottom:22},
+      tooltip:{trigger:'axis', backgroundColor:isDark()?'#1e293bf2':'#fffffff2', borderColor:'#475569',
+               textStyle:{color:isDark()?'#e2e8f0':'#0f172a', fontSize:11.5}},
+      xAxis:{type:'category', data:dates, axisLabel:{color:txtC, fontSize:9.5,
+             formatter:v=>v.slice(2,7)}},
+      yAxis:{type:'value', scale:true, splitLine:{lineStyle:{color:gridC}},
+             axisLabel:{color:txtC, fontSize:9.5}},
+      dataZoom:[{type:'inside'}],
+      series:[
+        {name:'收盘', type:'line', data:closes, symbol:'none', lineStyle:{color:BLUE, width:1.3}, z:3},
+        {name:'月度预测轨迹', type:'line', data:m20.map(r=>[r.date, r.m_pred]), symbol:'circle', symbolSize:3,
+         itemStyle:{color:PRED}, lineStyle:{color:PRED, width:1, type:'dashed'}, z:4},
+      ],
+    };
+    if (last && last.m && last.m.pred!=null){
+      opt.series[0].markPoint = {symbol:'circle', symbolSize:8, itemStyle:{color:PT,
+        borderColor:isDark()?'#1e293b':'#fff', borderWidth:1.5},
+        label:{color:'#fbbf24', fontSize:10.5, position:'top'},
+        data:[{coord:[dates.at(-1), last.m.pred], value:last.m.pred}]};
+      opt.series[0].markLine = {silent:true, symbol:'none',
+        lineStyle:{color:PT, type:'dashed', width:1},
+        label:{color:'#fbbf24', fontSize:9.5, position:'end'},
+        data: last.m.lo80!=null ? [{yAxis:last.m.lo80, label:{formatter:'80%下 '+last.m.lo80}},
+                                   {yAxis:last.m.hi80, label:{formatter:'80%上 '+last.m.hi80}}] : []};
+    }
+    return opt;
+  }
+
+  async function renderMultiBlock(code){
+    const cfg = MSYMS[code];
+    const [sb, rp20, price, rt] = await Promise.all([
+      j(`multi/scoreboard_${code}.json`), j(`multi/replay20_${code}.json`),
+      j(`multi/price_${code}.json`), j(`multi/rt_${code}.json`)]);
+    const host = document.getElementById('mBlocks');
+    let el = document.getElementById('mb_'+code);
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'mb_'+code;
+      el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px">
+          <b>${cfg.name}</b><span style="font-size:11.5px;opacity:.6">${cfg.exch}</span>
+          <span id="mbrt_${code}" style="margin-left:auto;font-size:12.5px" class="whitespace-nowrap"></span></div>
+        <div id="mbc_${code}" style="height:230px"></div>
+        <div id="mbs_${code}" style="font-size:11.5px;opacity:.8;margin:2px 0 6px"></div>
+        <div style="overflow-x:auto"><table class="w-full text-[12px] whitespace-nowrap" style="font-variant-numeric:tabular-nums;border-collapse:collapse">
+          <thead><tr id="mbh_${code}" style="color:${isDark()?'#8b95a7':'#52514e'};font-size:11px;text-align:left"></tr></thead>
+          <tbody id="mbb_${code}"></tbody></table></div>`;
+      host.appendChild(el);
+    }
+    // rt 行
+    if (rt && rt.last){
+      const chg = rt.last - rt.prev_settle, pc = chg/rt.prev_settle*100, up = chg>=0;
+      document.getElementById('mbrt_'+code).innerHTML =
+        `<b style="font-size:14px">${rt.last}</b> <span style="color:${up?'#ef4444':'#22c55e'}">${up?'+':''}${pc.toFixed(2)}%</span>`;
+    }
+    // 图
+    let chart = mbCharts[code];
+    if (!chart){ chart = echarts.init(document.getElementById('mbc_'+code)); mbCharts[code] = chart; }
+    chart.setOption(mbChartOpt(code, price, rp20, sb), true);
+    // summary
+    const ms = rp20 && rp20.summary || {}, ss = sb.summary || {};
+    document.getElementById('mbs_'+code).innerHTML =
+      `月度回放(3年·${ms.n||0}点) <b>${ms.maeM??'—'}%</b> vs naive ${ms.maeNaive??'—'}% · 方向 ${ms.hit??'—'}%` +
+      (ss.nM ? ` · 实盘月度 ${ss.nM} 笔 ${ss.maeM}%` : ` · 实盘月度 0 笔（11-10 起）`);
+    // 迷你表（近 8 行）
+    document.getElementById('mbh_'+code).innerHTML =
+      '<th class="pr-3 py-1">日期</th><th class="pr-3 py-1 text-right">收盘</th><th class="pr-3 py-1 text-right">月预测</th><th class="pr-3 py-1 text-right">80%区间</th><th class="pr-3 py-1 text-right">月误差%</th>';
+    const rows = (sb.rows||[]).slice(-8).reverse();
+    document.getElementById('mbb_'+code).innerHTML = rows.map(r=>{
+      const m = r.m || {}, e = m.err;
+      const ec = e==null ? '' : `style="color:${e>=0?'#ef4444':'#22c55e'}"`;
+      const cell = m.prog!=null && e==null ? `<span style="opacity:.55">${m.prog}/20</span>` : (e==null?'—':e);
+      const band = m.lo80!=null ? `${m.lo80}–${m.hi80}` : '—';
+      return `<tr style="border-top:1px solid rgba(128,140,155,.18)"><td class="pr-3 py-1">${r.date}</td>`+
+        `<td class="pr-3 py-1 text-right">${fmt(r.close)}</td>`+
+        `<td class="pr-3 py-1 text-right"><b>${fmt(m.pred)}</b></td>`+
+        `<td class="pr-3 py-1 text-right" style="opacity:.65;font-size:11px">${band}</td>`+
+        `<td class="pr-3 py-1 text-right" ${ec}>${cell}</td></tr>`;
+    }).join('');
+  }
+
+  (async function initMulti(){
+    for (const code of Object.keys(MSYMS)){
+      try { await renderMultiBlock(code); } catch(e){ console.warn('block', code, e); }
+    }
+    // 主题切换重渲染（零侵入 toggleTheme：观察 html class）
+    new MutationObserver(async ()=>{
+      if (!document.documentElement.classList.contains('dark')) await 0;
+      for (const code of Object.keys(MSYMS)){
+        try { await renderMultiBlock(code); } catch(e){}
+      }
+    }).observe(document.documentElement, {attributes:true, attributeFilter:['class']});
+    let rzT=null;
+    window.addEventListener('resize', ()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{
+      Object.values(mbCharts).forEach(c=>c.resize()); }, 120); });
+  })();
 </script>
 </body>
 </html>
