@@ -4,428 +4,195 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<title>玉米价格预测</title>
-<script src="tw.js"></script>
+<title>农产品价格预测</title>
 <script src="echarts.min.js"></script>
 <style>
   :root { color-scheme: dark; }
-  html:not(.dark) { color-scheme: light; }
-  .dark body { background:#0e1420; color:#e6ebf2; }
-  html:not(.dark) body { background:#f9f9f7; color:#0b0b0b; }
-  .dark .card { background:#161d2b; border-color:#2a3444; }
-  html:not(.dark) .card { background:#fcfcfb; border-color:#dcdad3; }
-  .card { border-width:1px; }
-  @media (max-width: 640px) {
-    body { font-size: 13px; }
-    #chart { height: 340px !important; }
-    table { font-size: 12px; }
-    th, td { padding: 4px 8px !important; }
-  }
-  /* 桌面一屏：整页不滚，图/表分区占满，表内数据滚（小屏保持整页滚动） */
-  @media (min-width: 641px) {
-    /* 2026-11-10 多品种区并入：恢复整页滚动（原一屏不滚布局），玉米图/表仍占首屏主体 */
-    html, body { height: auto; overflow: auto; }
-    #wrap { min-height: 100vh; display: flex; flex-direction: column; }
-    #chartSec { flex: 1 1 36vh; min-height: 280px; display: flex; flex-direction: column; }
-    #chart { flex: 1; min-height: 0; }
-    #sbSec { flex: 1 1 32vh; min-height: 240px; display: flex; flex-direction: column; }
-    #sbWrap { flex: 1; min-height: 0; overflow: auto; max-height: 44vh; }
-    /* border-collapse:collapse 下 sticky 表头背景会被滚动内容透出（Chrome 实锤），
-       改 separate+零边距，视觉不变，表头实底可靠遮住滚过的行 */
-    #sbWrap table { border-collapse: separate; border-spacing: 0; }
-    #sbWrap thead th { position: sticky; top: 0; z-index: 2;
-      box-shadow: inset 0 -2px 0 rgba(128,140,155,.55); }
-    .dark #sbWrap thead th { background: #161d2b; color: rgba(230,235,242,.8); }
-    html:not(.dark) #sbWrap thead th { background: #fcfcfb; color: rgba(11,11,11,.8); }
-    #sbWrap tfoot td { position: sticky; bottom: 0; }
-    .dark #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#161d2b; }
-    html:not(.dark) #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#fcfcfb; }
-  }
-  @media (max-width: 640px) { #dragbar { display: none; } }
-  /* 多品种卡片表头（动态 DOM，不用 tailwind class） */
-  #mBlocks .mbtbl thead tr { color:#52514e; }
-  .dark #mBlocks .mbtbl thead tr { color:#8b95a7; }
-  #dragbar { flex: none; height: 14px; margin: -5px 0; cursor: row-resize;
-    display: flex; align-items: center; justify-content: center; touch-action: none; z-index: 5; }
-  #dragbar::after { content: ''; width: 72px; height: 4px; border-radius: 2px;
-    background: rgba(128,140,155,.4); transition: background .15s; }
-  #dragbar:hover::after, #dragbar.on::after { background: #4aa3ff; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body { margin:0; font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:#0e1420; color:#e6ebf2; }
+  :root[data-theme="light"] body { background:#f9f9f7; color:#0b0b0b; }
+  .wrap { max-width:1440px; margin:0 auto; padding:16px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px; }
+  h1 { font-size:21px; margin:0; font-weight:700; }
+  h1 small { font-size:13px; font-weight:400; opacity:.6; margin-left:6px; }
+  #themeBtn { margin-left:auto; border-radius:9px; border:1px solid rgba(128,140,155,.4);
+              background:transparent; color:inherit; padding:6px 12px; font-size:13px; cursor:pointer; }
+  #cards { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(430px,1fr)); }
+  @media (max-width:480px){ #cards{grid-template-columns:1fr} }
+  .mbcard { background:#161d2b; border:1px solid #2a3444; border-radius:14px; padding:14px 16px 10px; }
+  :root[data-theme="light"] .mbcard { background:#fcfcfb; border-color:#dcdad3; }
+  .mbhead { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; margin-bottom:2px; }
+  .mbhead b { font-size:16.5px; }
+  .mbhead .exch { font-size:11.5px; opacity:.6; }
+  .mbhead .rt { margin-left:auto; font-size:13px; white-space:nowrap; }
+  .mbhead .rt b { font-size:15px; font-variant-numeric:tabular-nums; }
+  .mbchart { height:250px; }
+  .mbsum { font-size:11.8px; opacity:.85; margin:2px 0 8px; line-height:1.6; }
+  .mbtblwrap { overflow-x:auto; }
+  table { width:100%; font-size:12.3px; white-space:nowrap; font-variant-numeric:tabular-nums;
+          border-collapse:collapse; }
+  thead tr { color:#8b95a7; font-size:11px; text-align:left; }
+  :root[data-theme="light"] thead tr { color:#52514e; }
+  th { padding:4px 10px 5px 0; }
+  td { padding:4.5px 10px 4.5px 0; border-top:1px solid rgba(128,140,155,.18); }
+  .r { text-align:right; }
+  .up { color:#ef4444; } .dn { color:#22c55e; }
+  .dim { opacity:.6; font-size:11px; }
+  .empty { display:flex; align-items:center; justify-content:center; height:340px;
+           opacity:.5; font-size:14px; }
+  footer { text-align:center; font-size:12px; opacity:.5; padding:18px 0 22px; }
+  footer a { color:inherit; }
 </style>
 </head>
-<body class="min-h-screen">
-<div id="wrap" class="mx-auto max-w-[1400px] space-y-4 p-4">
-
-  <header class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-xl font-bold">玉米价格预测
-      <span class="text-sm font-normal opacity-60">· 大商所 C 主连</span></h1>
-    <button id="themeBtn" onclick="toggleTheme()" class="rounded-lg border border-gray-400/40 px-3 py-1.5 text-sm">☀️ 浅色</button>
+<body>
+<div class="wrap">
+  <header>
+    <h1>农产品价格预测<small>玉米 · 大豆 · 豆粕 · 生猪（月度 20 日均价 + 次日收盘，收盘对账）</small></h1>
+    <button id="themeBtn">☀️ 浅色</button>
   </header>
 
-  <!-- 主图 -->
-  <section id="chartSec" class="card rounded-xl p-4 shadow-sm">
-    <div id="chart"></div>
-  </section>
+  <div id="cards"></div>
 
-  <div id="dragbar" title="拖动调整图/表占比 · 双击恢复对半"></div>
-
-  <!-- 记分牌 -->
-  <section id="sbSec" class="card rounded-xl p-4 shadow-sm">
-    <h3 class="mb-3 text-base font-semibold">预测记分牌
-      <span class="text-[13px] font-normal opacity-70">（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日收盘均价，误差由收盘对账）</span></h3>
-    <div id="sbWrap"><table class="w-full text-[13px]">
-      <thead><tr id="sbHead" class="font-semibold text-left"></tr></thead>
-      <tbody id="sbBody"></tbody>
-      <tfoot id="sbFoot"></tfoot>
-    </table></div>
-  </section>
-
-  <!-- 多品种月度预测（2026-11-10 起：成熟一个并入一个，每品类独立一张卡片；小麦数据源攻关中） -->
-  <section id="multiSec">
-    <h3 class="mb-2 text-base font-semibold">多品种月度预测
-      <span class="text-[13px] font-normal opacity-70">（v3g 引擎 · 3 年滚动回放 76 决策点 + 每日实盘 ·
-        <a class="underline decoration-dotted" href="multi/index.html">完整记分牌↗</a>）</span></h3>
-    <div id="mBlocks" style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"></div>
-  </section>
-
-  <footer class="pb-6 text-center text-[12px] opacity-50">玉米价格预测 · 数据=大商所公开行情与免费公开源 · 引擎 v23+v31 · 2026-10-12</footer>
+  <footer>数据=交易所公开行情与免费公开源 · 玉米 v23+v31 · 其余 v3g ·
+    <a href="multi/index.html">完整记分牌↗</a> · 2026-11-10</footer>
 </div>
 
 <script>
-/* ---------- 主题 ---------- */
+/* ============ 品种配置（唯一差异点：数据同构、渲染模板唯一） ============ */
+const SYMS = {
+  C: {name:'玉米', exch:'大商所 C 主连'},
+  A: {name:'大豆', exch:'大商所 A 主连·黄大豆1号'},
+  M: {name:'豆粕', exch:'大商所 M 主连'},
+  L: {name:'生猪', exch:'大商所 LH 主连'},
+  W: {name:'小麦', exch:'郑商所 WH 主连', pending:'数据源攻关中（新浪 WH 已断更，走郑商所官方日线拼接）'},
+};
+const ORDER = ['C','A','M','L','W'];
+const charts = {};
+
 const isDark = () => document.documentElement.classList.contains('dark');
-function toggleTheme(){
-  document.documentElement.classList.toggle('dark');
-  document.getElementById('themeBtn').textContent = isDark() ? '☀️ 浅色' : '🌙 深色';
-  if (window._chart) renderChart(window._cat);
-}
-/* ---------- 图/表高度拖拽分隔条（桌面；双击恢复对半） ---------- */
-(function(){
-  const bar = document.getElementById('dragbar');
-  const cs = document.getElementById('chartSec'), sb = document.getElementById('sbSec');
-  if(!bar || !cs || !sb) return;
-  // 恢复上次拖拽的占比（存比例，跨屏高有效；双击重置时清除）
-  const KEY = 'fsSplit';
-  const save = () => { const t = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
-    if(t > 0) try { localStorage.setItem(KEY, (cs.getBoundingClientRect().height / t).toFixed(3)); } catch(e){} };
-  try { const r = parseFloat(localStorage.getItem(KEY));
-    if(r > 0.1 && r < 0.9) {
-      const t = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
-      cs.style.flex = `0 0 ${Math.round(r * t)}px`; sb.style.flex = '1';
-    } } catch(e){}
-  let drag = null;
-  bar.addEventListener('pointerdown', e => {
-    if(window.innerWidth < 641) return;
-    drag = { y: e.clientY, ch: cs.getBoundingClientRect().height };
-    bar.classList.add('on');
-    bar.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  bar.addEventListener('pointermove', e => {
-    if(!drag) return;
-    const total = cs.getBoundingClientRect().height + sb.getBoundingClientRect().height;
-    const h = Math.min(Math.max(drag.ch + (e.clientY - drag.y), 140), total - 140);
-    cs.style.flex = `0 0 ${h}px`; sb.style.flex = '1';
-    if(window._chart) window._chart.resize();
-  });
-  const end = () => { if(drag){ drag = null; bar.classList.remove('on'); save();
-    if(window._chart) window._chart.resize(); } };
-  bar.addEventListener('pointerup', end);
-  bar.addEventListener('pointercancel', end);
-  bar.addEventListener('dblclick', () => {
-    cs.style.flex = ''; sb.style.flex = '';
-    try { localStorage.removeItem(KEY); } catch(e){}
-    if(window._chart) window._chart.resize();
-  });
-})();
-
-/* ---------- 工具 ---------- */
 const fmt = v => (v == null || isNaN(v)) ? '—' : Math.round(v).toLocaleString();
-const errSpan = e => e==null ? '' :
-  `<b class="ml-1 text-[11px]" style="color:${e>0?'#ef4444':'#22c55e'}">${e>0?'+':''}${e.toFixed(2)}%</b>`;
+const D1 = v => v == null ? '—' : v;
+async function j(url){ try{ const r = await fetch(`${url}?t=${Date.now()}`); return r.ok ? await r.json() : null; }catch(e){ return null; } }
 
-/* ---------- 数据 ---------- */
-async function j(url){ try{ const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now()); return r.ok ? await r.json() : null; }catch(e){ return null; } }
-const isGH = location.host.endsWith('github.io');
+/* ============ 卡片模板（所有品种同一渲染函数） ============ */
+function cardHTML(code, cfg){
+  if (cfg.pending) return `<div class="mbcard"><div class="mbhead"><b>${cfg.name}</b>
+    <span class="exch">${cfg.exch}</span></div><div class="empty">${cfg.pending}</div></div>`;
+  return `<div class="mbcard">
+    <div class="mbhead"><b>${cfg.name}</b><span class="exch">${cfg.exch}</span>
+      <span class="rt" id="rt_${code}"></span></div>
+    <div class="mbchart" id="ch_${code}"></div>
+    <div class="mbsum" id="sum_${code}"></div>
+    <div class="mbtblwrap"><table>
+      <thead><tr><th>日期</th><th class="r">收盘</th><th class="r">次日预测</th>
+        <th class="r">月预测</th><th class="r">80%区间</th><th class="r">月误差%</th></tr></thead>
+      <tbody id="tb_${code}"></tbody></table></div></div>`;
+}
 
-/* ---------- 主图（ECharts，同 React 版口径） ---------- */
-/* x 轴标签随缩放分级：窗口>150 点=年-月，>50 点=月-日，更深=年-月-日（2026-11-03 用户令） */
-window._zx = [0, 1e9];
-const xAxisFmt = v => { const s = window._zx[1] - window._zx[0];
-  return s > 150 ? v.slice(2,7) : (s > 50 ? v.slice(5) : v); };
-function renderChart(cat){
-  const nH = cat.dates.length, NFd = cat.fdDates.length;
-  const CUT = Math.max(0, nH - 300);
-  const allD = [...cat.dates, ...cat.fdDates];
-  const num = a => (a||[]).map(v => v==null ? null : +v);
-  const h80lo=num(cat.hp80lo), h80hi=num(cat.hp80hi), h50lo=num(cat.hp50lo), h50hi=num(cat.hp50hi);
-  const f80lo=h80lo.concat(num(cat.fdP10)), f80hi=h80hi.concat(num(cat.fdP90));
-  const f50lo=h50lo.concat(num(cat.fdP25)), f50hi=h50hi.concat(num(cat.fdP75));
-  // 历史预测线尾部空位前向延续到今天（否则尾部 null 断线，未来段接不上今天）
-  const mraw=num(cat.mpred);
-  let _lv=null; const mfill=mraw.map(v=>{ if(v!=null)_lv=v; return _lv; });
-  const fmid=mfill.concat(num(cat.fdP50));
-  const diff=(lo,hi)=>lo.map((v,k)=>(v==null||hi[k]==null)?null:+(hi[k]-v).toFixed(1));
-  const closes = cat.closes.map(Number);
-  let vMin=1e9,vMax=-1e9;
-  [closes,f80hi,f80lo].forEach(a=>a.forEach(v=>{if(v!=null){vMin=Math.min(vMin,v);vMax=Math.max(vMax,v);}}));
-  const Y0=Math.floor((vMin-25)/50)*50, Y1=Math.ceil((vMax+25)/50)*50;
-  let mi=0,ni=0; closes.forEach((v,z)=>{if(v>closes[mi])mi=z;if(v<closes[ni])ni=z;});
-  // "今天"竖线优先挂真实今天：当日收盘链 16:35 后才把当日收进 dates，盘中真今天已在 fdDates 段；
-  // 挂不到（周末/节假日不在轴上）退回最后历史点，标签改叫"最新"避免误导
-  const _td=new Date().toISOString().slice(0,10), _ti=allD.indexOf(_td);
-  const tlX=_ti>=0?_ti:nH-1, tlL=(_ti>=0?'今天 ':'最新 ')+(_ti>=0?_td:cat.dates.at(-1)).slice(5);
-  const BLUE='#4aa3ff', PRED='#2ee6a8', DAILY='#22d3ee';
+function chartOpt(data){
+  const BLUE='#4aa3ff', PRED='#2ee6a8', PT='#f59e0b';
   const gridC = isDark() ? 'rgba(128,140,155,.25)' : 'rgba(128,140,155,.35)';
   const txtC = isDark() ? '#94a3b8' : '#475569';
-  const chart = window._chart || echarts.init(document.getElementById('chart'), null, {renderer:'canvas'});
-  window._chart = chart; window._cat = cat;
-  chart.setOption({
+  const rows = data.price || [];
+  const dates = rows.map(r=>r.date), closes = rows.map(r=>r.close);
+  const trk = data.track || [];
+  const last = data.month || {};
+  const opt = {
     animation:false,
-    grid:{left:56,right:16,top:30,bottom:64},
-    xAxis:{type:'category',data:allD,axisLabel:{color:txtC,fontSize:11,formatter:xAxisFmt}},
-    yAxis:{type:'value',min:Y0,max:Y1,splitNumber:5,axisLabel:{color:txtC,fontSize:11},splitLine:{lineStyle:{color:gridC}}},
-    legend:{show:true,top:2,left:60,itemGap:14,itemWidth:22,textStyle:{color:txtC,fontSize:11.5},
-      data:['收盘','月均价预测','80%区间','50%区间']},
-    tooltip:{trigger:'axis',axisPointer:{type:'cross'},backgroundColor:isDark()?'#1e293bf2':'#fffffff2',
-      borderColor:'#475569',textStyle:{color:isDark()?'#e2e8f0':'#0f172a',fontSize:12},
-      formatter(ps){
-        const i=ps[0].dataIndex;
-        const get=n=>{const p=ps.find(x=>x.seriesName===n);return p?p.value:null;};
-        if(i<nH){
-          let h=`<b>${cat.dates[i]}</b>`;
-          const cl=get('收盘'); if(cl!=null)h+=`<br>实际收盘 ${fmt(cl)} 元/吨`;
-          const mp=get('月均价预测'); if(mp!=null)h+=`<br><span style="color:${PRED}">20日收盘均价预测（当时）</span> ${fmt(mp)}`;
-          return h;
-        }
-        const jx=i-nH;
-        let h=`<b>${cat.fdDates[jx]} 预测</b>`;
-        const m0=cat.mp20&&cat.mp20[i]!=null?cat.mp20[i]:null;
-        if(m0!=null)h+=`<br><span style="color:${PRED}">未来20日收盘均价中枢 ${fmt(m0)}</span>`;
-        h+=`<br>日价格中枢 ${fmt(cat.fdP50[jx])}<br>80% 区间 ${fmt(cat.fdP10[jx])}–${fmt(cat.fdP90[jx])}<br>50% 区间 ${fmt(cat.fdP25[jx])}–${fmt(cat.fdP75[jx])}`;
-        return h;
-      }},
-    dataZoom:[
-      {type:'inside',startValue:CUT,endValue:nH+NFd-1,zoomOnMouseWheel:true,moveOnMouseMove:true},
-      {type:'slider',startValue:CUT,endValue:nH+NFd-1,height:20,bottom:10,borderColor:'#8a94a3',
-       fillerColor:'rgba(74,163,255,.15)',handleStyle:{color:BLUE},textStyle:{color:txtC,fontSize:10}}],
+    grid:{left:54,right:16,top:26,bottom:22},
+    tooltip:{trigger:'axis', backgroundColor:isDark()?'#1e293bf2':'#fffffff2', borderColor:'#475569',
+             textStyle:{color:isDark()?'#e2e8f0':'#0f172a', fontSize:11.5}},
+    xAxis:{type:'category', data:dates, axisLabel:{color:txtC, fontSize:9.5, formatter:v=>v.slice(2,7)}},
+    yAxis:{type:'value', scale:true, splitLine:{lineStyle:{color:gridC}},
+           axisLabel:{color:txtC, fontSize:9.5}},
+    dataZoom:[{type:'inside'}],
     series:[
-      {name:'80带底',type:'line',data:f80lo,stack:'b80',symbol:'none',lineStyle:{opacity:0},silent:true},
-      {name:'80%区间',type:'line',data:diff(f80lo,f80hi),stack:'b80',symbol:'none',color:'rgba(74,163,255,.55)',lineStyle:{opacity:0},areaStyle:{color:'rgba(74,163,255,.22)',opacity:.45}},
-      {name:'50带底',type:'line',data:f50lo,stack:'b50',symbol:'none',lineStyle:{opacity:0},silent:true},
-      {name:'50%区间',type:'line',data:diff(f50lo,f50hi),stack:'b50',symbol:'none',color:'#7fb3e8',lineStyle:{opacity:0},areaStyle:{color:'#7fb3e8',opacity:.4}},
-      {name:'收盘',type:'line',data:closes,symbol:'none',color:BLUE,lineStyle:{color:BLUE,width:1.4},z:5,
-        markPoint:{symbol:'circle',symbolSize:8,animation:false,itemStyle:{color:'#f59e0b',borderColor:isDark()?'#1e293b':'#fff',borderWidth:1.5},
-          label:{color:'#fbbf24',fontSize:11,distance:8},
-          data:[{coord:[mi,closes[mi]],value:fmt(closes[mi]),label:{position:'top',formatter:'阶段高点 {c}'}},
-                {coord:[ni,closes[ni]],value:fmt(closes[ni]),label:{position:'bottom',formatter:'阶段低点 {c}'}}]}},
-      {name:'月均价预测',type:'line',data:fmid,symbol:'none',color:PRED,lineStyle:{color:PRED,width:1.3},z:6},
-      // "今天"竖线挂独立辅助线（不进图例，点图例开关不连带消失）
-      {name:'今日线',type:'line',data:[],symbol:'none',silent:true,z:4,
-        markLine:{symbol:'none',silent:true,
-          data:[{xAxis:tlX,label:{formatter:tlL,color:txtC,fontSize:11,position:'insideEndTop'},
-                 lineStyle:{color:txtC,type:'dashed',width:1}}]}},
-    ]}, true);
-  // 缩放时按窗口大小切换 x 轴标签粒度（off 防主题切换重入时叠加监听）
-  window._zx = [CUT, nH + NFd - 1];
-  chart.off('datazoom').on('datazoom', () => {
-    const o = (chart.getOption().dataZoom || [])[0] || {};
-    window._zx = [o.startValue ?? 0, o.endValue ?? 1e9];
-    chart.setOption({xAxis:[{axisLabel:{formatter:xAxisFmt}}]});
-  });
-  const fitMobile=()=>{ const m=window.innerWidth<640;
-    chart.setOption({grid:{left:m?42:56,right:m?10:16,top:m?36:30,bottom:m?54:64},
-      legend:{show:true,top:0,left:m?8:60,itemGap:m?8:14,itemWidth:m?14:22,
-        textStyle:{color:txtC,fontSize:m?10:11.5}},
-      xAxis:{axisLabel:{color:txtC,fontSize:m?9:11}},
-      yAxis:{axisLabel:{color:txtC,fontSize:m?9:11}}});
-    chart.resize(); };
-  fitMobile();
-  window.addEventListener('resize',()=>{fitMobile();});
-}
-
-/* ---------- 记分牌 ---------- */
-function renderBoard(data, rt){
-  const rows=(data?.rows||[]).slice().reverse();
-  const sm=data?.summary||{};
-  const today=new Date().toISOString().slice(0,10);
-  const fresh = !isGH && rt && rt.last && Date.now()/1000-(rt.ts||0)<1800;
-  const showRt = fresh && rows.length>0 && rows[0].date<today;
-  document.getElementById('sbHead').innerHTML =
-    `<th class="px-2.5 py-1.5">日期</th><th class="px-2.5 py-1.5 text-right">开盘</th><th class="px-2.5 py-1.5 text-right">收盘</th>
-     <th class="px-2.5 py-1.5 text-right">次日预测</th><th class="px-2.5 py-1.5 text-right">月预测</th>
-     <th class="px-2.5 py-1.5 text-right">80%区间</th><th class="px-2.5 py-1.5 text-right">月误差</th>`;
-  const td=(v,right='',cls='')=>`<td class="px-2.5 py-1.5 whitespace-nowrap ${right} ${cls}">${v}</td>`;
-  let html='';
-  if(showRt) html+=`<tr style="background:var(--tw-shadow,rgba(128,140,155,.15));box-shadow:inset 3px 0 0 #f59e0b">
-    ${td(today+'<span class="ml-1 text-[11px] opacity-60">盘中</span>')}${td(fmt(rt.open),'text-right')}${td(fmt(rt.last),'text-right font-semibold')}
-    ${td('收盘后','text-right opacity-50')}${td('收盘后','text-right opacity-50')}${td('','text-right')}${td('收盘后','text-right opacity-50')}</tr>`;
-  html+=rows.map((r,i)=>{
-    const hl=(i===0&&!showRt)?'style="background:rgba(74,163,255,.10);box-shadow:inset 3px 0 0 #4aa3ff"':'';
-    return `<tr ${hl}>${td(r.date)}${td(fmt(r.open),'text-right')}${td(fmt(r.close),'text-right font-semibold')}
-      ${td(`<b>${fmt(r.d2?.pred)}</b>${errSpan(r.d2?.err)}`,'text-right')}
-      ${td(`<b>${fmt(r.m?.pred)}</b>`,'text-right')}
-      ${td(r.m?.lo80!=null?`${r.m.lo80}–${r.m.hi80}`:'','text-right text-[11px] opacity-60 whitespace-nowrap')}
-      ${td(r.m?.err!=null?errSpan(r.m?.err):(r.m?.prog!=null?`<span class="text-[11px] opacity-50">进行中 ${r.m.prog}/20</span>`:''),'text-right')}</tr>`;
-  }).join('');
-  document.getElementById('sbBody').innerHTML=html;
-  document.getElementById('sbFoot').innerHTML=`<tr class="border-t-2 border-gray-400/40 font-bold text-[12px]" style="background:rgba(128,140,155,.12)">
-    <td class="px-2.5 py-1.5" colspan="3">已兑现平均误差（基准：日度~1%·月度 0.85%）</td>
-    <td class="px-2.5 py-1.5 text-right">${sm.nD?`${sm.nD} 笔 ${sm.maeD}%`:''}</td>
-    <td class="px-2.5 py-1.5 text-right" colspan="3">${sm.nM?`${sm.nM} 笔 ${sm.maeM}%`:''}</td></tr>`;
-}
-
-/* ---------- 盘中续点（仅内网版） ---------- */
-function intraday(rt){
-  const chart=window._chart, cat=window._cat;
-  if(!chart||!rt||!rt.last||Date.now()/1000-(rt.ts||0)>1800) return;
-  const opt=chart.getOption();
-  const today=new Date().toISOString().slice(0,10);
-  const xd=opt.xAxis[0].data;
-  if(xd.at(-1)!==today){
-    xd.push(today);
-    opt.series.forEach(s=>{
-      if(s.name==='收盘')s.data.push(rt.last);
-      else if(['80带底','80%区间','50带底','50%区间'].includes(s.name))s.data.push(null);
-    });
-    opt.dataZoom.forEach(z=>z.endValue=xd.length-1);
-    opt.series.forEach(s=>{ if(s.name==='今日线'&&s.markLine?.data?.[0]){
-      s.markLine.data[0].xAxis=xd.length-1;
-      s.markLine.data[0].label={formatter:'今天 '+today.slice(5),color:'#94a3b8',position:'insideEndTop'};}});
-    chart.setOption(opt);
-  }
-}
-
-/* ---------- 启动 ---------- */
-(async()=>{
-  const cats = await j('cats_v2.json');
-  const cat = (cats||[]).find(c=>c.code==='C');
-  if(cat){ renderChart(cat); }
-  const board = await j('scoreboard.json');
-  const rt = isGH ? null : await j('rt.json');
-  renderBoard(board, rt);
-  if(!isGH) setInterval(async()=>{ const r=await j('rt.json'); intraday(r); renderBoard(board,r); }, 300000);
-})();
-</script>
-
-<script>
-/* ---------- 多品种 block（2026-11-10 起：成熟一个并入一个；原生渲染零依赖 React） ---------- */
-  const MSYMS = {
-    M: {name:'豆粕', exch:'大商所 M 主连'},
-    A: {name:'大豆', exch:'大商所 A 主连·黄大豆1号'},
-    L: {name:'生猪', exch:'大商所 LH 主连'},
+      {name:'收盘', type:'line', data:closes, symbol:'none',
+       lineStyle:{color:BLUE, width:1.3}, z:3},
+      {name:'月度预测轨迹', type:'line', data:trk.map(r=>[r.date, r.m_pred]), symbol:'circle',
+       symbolSize:3, itemStyle:{color:PRED}, lineStyle:{color:PRED, width:1, type:'dashed'}, z:4},
+    ],
   };
-  window._mbCharts = {};
-  const mbCharts = window._mbCharts;
-
-  function mbChartOpt(code, price, rp20, sb){
-    const BLUE='#4aa3ff', PRED='#2ee6a8', PT='#f59e0b';
-    const gridC = isDark() ? 'rgba(128,140,155,.25)' : 'rgba(128,140,155,.35)';
-    const txtC = isDark() ? '#94a3b8' : '#475569';
-    const rows = (price && price.rows) || [];
-    const dates = rows.map(r=>r.date), closes = rows.map(r=>r.close);
-    const m20 = (rp20 && rp20.rows) || [];
-    const last = (sb.rows||[]).filter(r=>r.m && r.m.pred!=null).pop() || (m20.length ? {date:m20.at(-1).date, m:{pred:m20.at(-1).m_pred, lo80:m20.at(-1).lo80, hi80:m20.at(-1).hi80}} : null);
-    const opt = {
-      animation:false,
-      grid:{left:52,right:14,top:26,bottom:22},
-      tooltip:{trigger:'axis', backgroundColor:isDark()?'#1e293bf2':'#fffffff2', borderColor:'#475569',
-               textStyle:{color:isDark()?'#e2e8f0':'#0f172a', fontSize:11.5}},
-      xAxis:{type:'category', data:dates, axisLabel:{color:txtC, fontSize:9.5,
-             formatter:v=>v.slice(2,7)}},
-      yAxis:{type:'value', scale:true, splitLine:{lineStyle:{color:gridC}},
-             axisLabel:{color:txtC, fontSize:9.5}},
-      dataZoom:[{type:'inside'}],
-      series:[
-        {name:'收盘', type:'line', data:closes, symbol:'none', lineStyle:{color:BLUE, width:1.3}, z:3},
-        {name:'月度预测轨迹', type:'line', data:m20.map(r=>[r.date, r.m_pred]), symbol:'circle', symbolSize:3,
-         itemStyle:{color:PRED}, lineStyle:{color:PRED, width:1, type:'dashed'}, z:4},
-      ],
-    };
-    if (last && last.m && last.m.pred!=null){
-      opt.series[0].markPoint = {symbol:'circle', symbolSize:8, itemStyle:{color:PT,
-        borderColor:isDark()?'#1e293b':'#fff', borderWidth:1.5},
-        label:{color:'#fbbf24', fontSize:10.5, position:'top'},
-        data:[{coord:[dates.at(-1), last.m.pred], value:last.m.pred}]};
+  if (last.pred != null){
+    opt.series[0].markPoint = {symbol:'circle', symbolSize:8, itemStyle:{color:PT,
+      borderColor:isDark()?'#1e293b':'#fff', borderWidth:1.5},
+      label:{color:'#fbbf24', fontSize:10.5, position:'top'},
+      data:[{coord:[dates[dates.length-1], last.pred], value:last.pred}]};
+    if (last.lo80 != null){
       opt.series[0].markLine = {silent:true, symbol:'none',
         lineStyle:{color:PT, type:'dashed', width:1},
         label:{color:'#fbbf24', fontSize:9.5, position:'end'},
-        data: last.m.lo80!=null ? [{yAxis:last.m.lo80, label:{formatter:'80%下 '+last.m.lo80}},
-                                   {yAxis:last.m.hi80, label:{formatter:'80%上 '+last.m.hi80}}] : []};
+        data:[{yAxis:last.lo80, label:{formatter:'80%下 '+last.lo80}},
+              {yAxis:last.hi80, label:{formatter:'80%上 '+last.hi80}}]};
     }
-    return opt;
   }
+  return opt;
+}
 
-  async function renderMultiBlock(code){
-    const cfg = MSYMS[code];
-    const [sb, rp20, price, rt] = await Promise.all([
-      j(`multi/scoreboard_${code}.json`), j(`multi/replay20_${code}.json`),
-      j(`multi/price_${code}.json`), j(`multi/rt_${code}.json`)]);
-    const host = document.getElementById('mBlocks');
-    let el = document.getElementById('mb_'+code);
-    // 卡片样式内联（tw.js 不为动态 DOM 生成 class 样式；主题切换时随重渲染更新）
-    const cardStyle = () => `background:${isDark()?'#161d2b':'#fcfcfb'};` +
-      `border:1px solid ${isDark()?'#2a3444':'#dcdad3'};border-radius:12px;padding:14px 16px;`;
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'mb_'+code;
-      el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px">
-          <b>${cfg.name}</b><span style="font-size:11.5px;opacity:.6">${cfg.exch}</span>
-          <span id="mbrt_${code}" style="margin-left:auto;font-size:12.5px" class="whitespace-nowrap"></span></div>
-        <div id="mbc_${code}" style="height:230px"></div>
-        <div id="mbs_${code}" style="font-size:11.5px;opacity:.8;margin:2px 0 6px"></div>
-        <div style="overflow-x:auto"><table class="mbtbl w-full text-[12px] whitespace-nowrap" style="font-variant-numeric:tabular-nums;border-collapse:collapse">
-          <thead><tr id="mbh_${code}" style="font-size:11px;text-align:left"></tr></thead>
-          <tbody id="mbb_${code}"></tbody></table></div>`;
-      host.appendChild(el);
-    }
-    el.style.cssText = cardStyle();
-    // rt 行
-    if (rt && rt.last){
-      const chg = rt.last - rt.prev_settle, pc = chg/rt.prev_settle*100, up = chg>=0;
-      document.getElementById('mbrt_'+code).innerHTML =
-        `<b style="font-size:14px">${rt.last}</b> <span style="color:${up?'#ef4444':'#22c55e'}">${up?'+':''}${pc.toFixed(2)}%</span>`;
-    }
-    // 图
-    let chart = mbCharts[code];
-    if (!chart){ chart = echarts.init(document.getElementById('mbc_'+code)); mbCharts[code] = chart; }
-    chart.setOption(mbChartOpt(code, price, rp20, sb), true);
-    // summary
-    const ms = rp20 && rp20.summary || {}, ss = sb.summary || {};
-    document.getElementById('mbs_'+code).innerHTML =
-      `月度回放(3年·${ms.n||0}点) <b>${ms.maeM??'—'}%</b> vs naive ${ms.maeNaive??'—'}% · 方向 ${ms.hit??'—'}%` +
-      (ss.nM ? ` · 实盘月度 ${ss.nM} 笔 ${ss.maeM}%` : ` · 实盘月度 0 笔（11-10 起）`);
-    // 迷你表（近 8 行）
-    document.getElementById('mbh_'+code).innerHTML =
-      '<th class="pr-3 py-1">日期</th><th class="pr-3 py-1 text-right">收盘</th><th class="pr-3 py-1 text-right">月预测</th><th class="pr-3 py-1 text-right">80%区间</th><th class="pr-3 py-1 text-right">月误差%</th>';
-    const rows = (sb.rows||[]).slice(-8).reverse();
-    document.getElementById('mbb_'+code).innerHTML = rows.map(r=>{
-      const m = r.m || {}, e = m.err;
-      const ec = e==null ? '' : `style="color:${e>=0?'#ef4444':'#22c55e'}"`;
-      const cell = m.prog!=null && e==null ? `<span style="opacity:.55">${m.prog}/20</span>` : (e==null?'—':e);
-      const band = m.lo80!=null ? `${m.lo80}–${m.hi80}` : '—';
-      return `<tr style="border-top:1px solid rgba(128,140,155,.18)"><td class="pr-3 py-1">${r.date}</td>`+
-        `<td class="pr-3 py-1 text-right">${fmt(r.close)}</td>`+
-        `<td class="pr-3 py-1 text-right"><b>${fmt(m.pred)}</b></td>`+
-        `<td class="pr-3 py-1 text-right" style="opacity:.65;font-size:11px">${band}</td>`+
-        `<td class="pr-3 py-1 text-right" ${ec}>${cell}</td></tr>`;
-    }).join('');
+async function renderCard(code){
+  const cfg = SYMS[code];
+  const host = document.getElementById('cards');
+  let el = document.getElementById('card_'+code);
+  if (!el){ el = document.createElement('div'); el.id = 'card_'+code; el.innerHTML = cardHTML(code, cfg); host.appendChild(el); }
+  if (cfg.pending) return;
+  const [sb, rp20, price, rt] = await Promise.all([
+    j(`multi/scoreboard_${code}.json`), j(`multi/replay20_${code}.json`),
+    j(`multi/price_${code}.json`), j(`multi/rt_${code}.json`)]);
+  // rt 行
+  if (rt && rt.last){
+    const chg = rt.last - rt.prev_settle, pc = chg/rt.prev_settle*100, up = chg>=0;
+    document.getElementById('rt_'+code).innerHTML =
+      `<b class="${up?'up':'dn'}">${rt.last}</b> <span class="${up?'up':'dn'}">${up?'+':''}${pc.toFixed(2)}%</span>`;
   }
+  const rows = (sb && sb.rows) || [];
+  const mrow = [...rows].reverse().find(r=>r.m && r.m.pred!=null) || {};
+  const data = {
+    price: (price && price.rows) || rows.filter(r=>r.close!=null).map(r=>({date:r.date, close:r.close})),
+    track: (rp20 && rp20.rows) || [],
+    month: mrow.m || null,
+  };
+  let chart = charts[code];
+  if (!chart){ chart = echarts.init(document.getElementById('ch_'+code)); charts[code] = chart; }
+  chart.setOption(chartOpt(data), true);
+  // 摘要（数据驱动：live 标志区分实盘/回放来源，模板无分支）
+  const tsum = (rp20 && rp20.summary) || {}, ss = (sb && sb.summary) || {};
+  const tag = tsum.live ? '实盘' : '回放';
+  let sum = `月度（${tag}${tsum.live?'':` 3年·${tsum.n??0}点`}）：MAE <b>${tsum.maeM??'—'}%</b>`;
+  if (!tsum.live && tsum.maeNaive!=null) sum += ` vs naive ${tsum.maeNaive}%`;
+  if (!tsum.live && tsum.hit!=null) sum += ` · 方向 ${tsum.hit}%`;
+  if (!tsum.live && ss.nM) sum += ` · 实盘 ${ss.nM} 笔 ${ss.maeM}%`;
+  if (tsum.live && ss.nD) sum += ` · 次日实盘 ${ss.nD} 笔 ${ss.maeD}%`;
+  document.getElementById('sum_'+code).innerHTML = sum;
+  // 表格（近 8 日）
+  document.getElementById('tb_'+code).innerHTML = rows.slice(-8).reverse().map(r=>{
+    const m = r.m || {}, d2 = r.d2 || {};
+    const e = m.err, ec = e==null ? '' : e>=0 ? 'up' : 'dn';
+    const cell = e!=null ? `<span class="${ec}">${e}</span>`
+      : (m.prog!=null ? `<span class="dim">进行中 ${m.prog}/20</span>` : '—');
+    const d2e = d2.err, d2c = d2e==null ? '' : d2e>=0 ? 'up' : 'dn';
+    return `<tr><td>${r.date}</td><td class="r">${D1(r.close)}</td>`+
+      `<td class="r">${d2.pred!=null?`<b>${d2.pred}</b>${d2e!=null?` <span class="dim ${d2c}">${d2e}</span>`:''}`:'—'}</td>`+
+      `<td class="r">${m.pred!=null?`<b>${m.pred}</b>`:'—'}</td>`+
+      `<td class="r dim">${m.lo80!=null?`${m.lo80}–${m.hi80}`:'—'}</td>`+
+      `<td class="r">${cell}</td></tr>`;
+  }).join('');
+}
 
-  (async function initMulti(){
-    for (const code of Object.keys(MSYMS)){
-      try { await renderMultiBlock(code); } catch(e){ console.warn('block', code, e); }
-    }
-    // 主题切换重渲染（零侵入 toggleTheme：观察 html class）
-    new MutationObserver(async ()=>{
-      if (!document.documentElement.classList.contains('dark')) await 0;
-      for (const code of Object.keys(MSYMS)){
-        try { await renderMultiBlock(code); } catch(e){}
-      }
-    }).observe(document.documentElement, {attributes:true, attributeFilter:['class']});
-    let rzT=null;
-    window.addEventListener('resize', ()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{
-      Object.values(mbCharts).forEach(c=>c.resize()); }, 120); });
-  })();
+/* ============ 启动 ============ */
+(async function init(){
+  document.getElementById('themeBtn').onclick = ()=>{
+    document.documentElement.classList.toggle('dark');
+    document.documentElement.setAttribute('data-theme',
+      document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    document.getElementById('themeBtn').textContent = isDark() ? '☀️ 浅色' : '🌙 深色';
+    for (const c of ORDER){ if (!SYMS[c].pending) renderCard(c); }
+  };
+  for (const c of ORDER){ try { await renderCard(c); } catch(e){ console.warn(c, e); } }
+  let rz = null;
+  window.addEventListener('resize', ()=>{ clearTimeout(rz); rz = setTimeout(()=>{
+    Object.values(charts).forEach(c=>c.resize()); }, 120); });
+})();
 </script>
 </body>
 </html>

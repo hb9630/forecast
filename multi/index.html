@@ -86,12 +86,13 @@
 
 <script>
 const SYMS = {
+  C: {name:'玉米', exch:'大商所 C 主连'},
   M: {name:'豆粕', exch:'大商所 M 主连 · 大豆榨油副产品（饲料）'},
   A: {name:'大豆', exch:'大商所 A 主连（黄大豆1号·国产豆）'},
   L: {name:'生猪', exch:'大商所 LH 主连'},
   W: {name:'小麦', exch:'郑商所 WH · 数据源攻关中', disabled:true},
 };
-let cur = 'M', RNG = '3Y';
+let cur = 'C', RNG = '3Y';
 const chart = echarts.init(document.getElementById('chart'), null, {renderer:'canvas'});
 const $ = id => document.getElementById(id);
 const D = (x, d=1) => x==null ? '—' : (+x).toFixed(d);
@@ -200,7 +201,8 @@ function renderTable(sb, rp, rp20){
   }
   if (rp20 && rp20.summary && rp20.summary.n){
     const ms = rp20.summary;
-    html += ` · 月度回放 ${ms.n} 点：v3g MAE ${ms.maeM}% vs naive ${ms.maeNaive}%`;
+    html += ms.live ? ` · 月度实盘 ${ms.n} 笔：MAE ${ms.maeM}%`
+                    : ` · 月度回放 ${ms.n} 点：v3g MAE ${ms.maeM}% vs naive ${ms.maeNaive}%`;
   }
   html += ` · 生成 ${new Date((sb.generated_epoch||0)*1000).toLocaleString('zh-CN')}`;
   $('sumline').innerHTML = html;
