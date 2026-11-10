@@ -42,6 +42,9 @@
     html:not(.dark) #sbWrap tfoot td { background: linear-gradient(rgba(128,140,155,.12),rgba(128,140,155,.12)),#fcfcfb; }
   }
   @media (max-width: 640px) { #dragbar { display: none; } }
+  /* 多品种卡片表头（动态 DOM，不用 tailwind class） */
+  #mBlocks .mbtbl thead tr { color:#52514e; }
+  .dark #mBlocks .mbtbl thead tr { color:#8b95a7; }
   #dragbar { flex: none; height: 14px; margin: -5px 0; cursor: row-resize;
     display: flex; align-items: center; justify-content: center; touch-action: none; z-index: 5; }
   #dragbar::after { content: ''; width: 72px; height: 4px; border-radius: 2px;
@@ -359,20 +362,23 @@ function intraday(rt){
       j(`multi/price_${code}.json`), j(`multi/rt_${code}.json`)]);
     const host = document.getElementById('mBlocks');
     let el = document.getElementById('mb_'+code);
+    // 卡片样式内联（tw.js 不为动态 DOM 生成 class 样式；主题切换时随重渲染更新）
+    const cardStyle = () => `background:${isDark()?'#161d2b':'#fcfcfb'};` +
+      `border:1px solid ${isDark()?'#2a3444':'#dcdad3'};border-radius:12px;padding:14px 16px;`;
     if (!el){
       el = document.createElement('div');
       el.id = 'mb_'+code;
-      el.className = 'card rounded-xl p-4 shadow-sm';
       el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px">
           <b>${cfg.name}</b><span style="font-size:11.5px;opacity:.6">${cfg.exch}</span>
           <span id="mbrt_${code}" style="margin-left:auto;font-size:12.5px" class="whitespace-nowrap"></span></div>
         <div id="mbc_${code}" style="height:230px"></div>
         <div id="mbs_${code}" style="font-size:11.5px;opacity:.8;margin:2px 0 6px"></div>
-        <div style="overflow-x:auto"><table class="w-full text-[12px] whitespace-nowrap" style="font-variant-numeric:tabular-nums;border-collapse:collapse">
-          <thead><tr id="mbh_${code}" style="color:${isDark()?'#8b95a7':'#52514e'};font-size:11px;text-align:left"></tr></thead>
+        <div style="overflow-x:auto"><table class="mbtbl w-full text-[12px] whitespace-nowrap" style="font-variant-numeric:tabular-nums;border-collapse:collapse">
+          <thead><tr id="mbh_${code}" style="font-size:11px;text-align:left"></tr></thead>
           <tbody id="mbb_${code}"></tbody></table></div>`;
       host.appendChild(el);
     }
+    el.style.cssText = cardStyle();
     // rt 行
     if (rt && rt.last){
       const chg = rt.last - rt.prev_settle, pc = chg/rt.prev_settle*100, up = chg>=0;
