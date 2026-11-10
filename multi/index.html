@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<title>多品种价格预测</title>
+<script src="../echarts.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body { margin:0; font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:#0e1420; color:#e6ebf2; }
+  :root[data-theme="light"] body { background:#f9f9f7; color:#0b0b0b; }
+  .card { background:#161d2b; border:1px solid #2a3444; border-radius:12px; }
+  :root[data-theme="light"] .card { background:#fcfcfb; border-color:#dcdad3; }
+  .wrap { max-width:1400px; margin:0 auto; padding:16px; display:flex; flex-direction:column;
+          gap:14px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  h1 { font-size:20px; margin:0; font-weight:700; }
+  h1 small { font-size:13px; font-weight:400; opacity:.6; }
+  .tabs { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  .tab { padding:5px 14px; border-radius:8px; border:1px solid rgba(128,140,155,.4);
+         background:transparent; color:inherit; cursor:pointer; font-size:14px; }
+  .tab.on { background:#3987e5; border-color:#3987e5; color:#fff; }
+  .tab:disabled { opacity:.35; cursor:not-allowed; }
+  #chart { height:380px; padding:6px 4px 0; }
+  .rt { display:flex; gap:18px; flex-wrap:wrap; padding:10px 16px 0; font-size:14px; }
+  .rt b { font-size:20px; font-variant-numeric:tabular-nums; }
+  .up { color:#dc2626; } .dn { color:#16a34a; } .mut { opacity:.6; }
+  table { border-collapse:separate; border-spacing:0; width:100%; font-size:13px;
+          font-variant-numeric:tabular-nums; }
+  th { position:sticky; top:0; text-align:left; padding:7px 12px; font-size:12px; color:#8b95a7;
+       background:#161d2b; box-shadow: inset 0 -2px 0 rgba(128,140,155,.55); white-space:nowrap; }
+  :root[data-theme="light"] th { color:#52514e; background:#fcfcfb; }
+  td { padding:5px 12px; border-bottom:1px solid rgba(128,140,155,.18); white-space:nowrap; }
+  td.r { text-align:right; }
+  #sbWrap { max-height:340px; overflow:auto; }
+  .card h3 { margin:0; padding:14px 16px 4px; font-size:15px; }
+  .card h3 small { font-weight:400; opacity:.65; font-size:12.5px; }
+  #sumline { padding:2px 16px 10px; font-size:12.5px; opacity:.75; }
+  footer { text-align:center; font-size:12px; opacity:.5; padding-bottom:20px; }
+  .pill { font-size:11px; padding:1px 7px; border-radius:99px; border:1px solid rgba(128,140,155,.4); }
+  @media (max-width:640px){ #chart{height:300px} .rt{gap:12px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>多品种价格预测 <small id="sub">· 豆粕 大商所主连</small></h1>
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <section class="card">
+    <div class="rt" id="rt"><span class="mut">加载中…</span></div>
+    <div id="chart"></div>
+  </section>
+
+  <section class="card">
+    <h3>预测记分牌 <small>（最新在顶；次日预测=明日收盘、月预测=未来 20 交易日收盘均价，误差由收盘对账）</small></h3>
+    <div id="sumline"></div>
+    <div id="sbWrap">
+      <table>
+        <thead><tr>
+          <th>日期</th><th class="r">开盘</th><th class="r">收盘</th>
+          <th class="r">次日预测</th><th class="r">次日误差%</th>
+          <th class="r">月预测</th><th class="r">80%区间</th><th class="r">进度</th><th class="r">月误差%</th>
+        </tr></thead>
+        <tbody id="sbBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>多品种价格预测 · 数据=交易所公开行情（新浪）· 引擎 v1/v2 + v3g · 2026-11-10</footer>
+</div>
+
+<script>
+const SYMS = {
+  M: {name:'豆粕', exch:'大商所 M 主连'},
+  A: {name:'豆一', exch:'大商所 A 主连'},
+  L: {name:'生猪', exch:'大商所 LH 主连'},
+  W: {name:'小麦', exch:'郑商所 WH · 数据源攻关中', disabled:true},
+};
+let cur = 'M';
+const chart = echarts.init(document.getElementById('chart'), null, {renderer:'canvas'});
+const $ = id => document.getElementById(id);
+
+function pct(x, d=1){ return x==null ? '' : (+x).toFixed(d); }
+
+async function load(code){
+  cur = code;
+  document.getElementById('sub').textContent = '· ' + SYMS[code].name + ' ' + SYMS[code].exch;
+  const sb = await (await fetch(`scoreboard_${code}.json?v=${Date.now()}`)).json();
+  let rt = null;
+  try { rt = await (await fetch(`rt_${code}.json?v=${Date.now()}`)).json(); } catch(e){}
+  renderRt(rt, sb);
+  renderChart(sb, code);
+  renderTable(sb);
+}
+
+function renderRt(rt, sb){
+  const el = $('rt');
+  if (!rt){ el.innerHTML = '<span class="mut">实时快照未生成（收盘拍后可用）</span>'; return; }
+  const chg = rt.last - rt.prev_settle, p = (chg/rt.prev_settle*100);
+  const cls = chg >= 0 ? 'up' : 'dn';
+  const last = sb.rows.filter(r=>r.close!=null);
+  el.innerHTML =
+    `<span>${rt.name} 现价 <b class="${cls}">${rt.last}</b>
+       <span class="${cls}">${chg>=0?'+':''}${pct(chg)} (${chg>=0?'+':''}${pct(p,2)}%)</span></span>
+     <span class="mut">昨结 ${rt.prev_settle} · 开 ${rt.open} · 快照时间 ${new Date(rt.ts*1000).toLocaleString('zh-CN')}</span>`;
+}
+
+function renderChart(sb, code){
+  const rows = sb.rows.filter(r=>r.close!=null).slice(-180);
+  const dates = rows.map(r=>r.date), closes = rows.map(r=>r.close);
+  const last = rows[rows.length-1];
+  const m = last && last.m && last.m.pred != null ? last.m : null;
+  const opt = {
+    backgroundColor:'transparent',
+    grid:{left:56,right:20,top:24,bottom:28},
+    tooltip:{trigger:'axis', backgroundColor:'#161d2b', borderColor:'#2a3444',
+             textStyle:{color:'#e6ebf2', fontSize:12}},
+    xAxis:{type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(128,140,155,.4)'}},
+           axisLabel:{color:'#8b95a7', fontSize:11}},
+    yAxis:{type:'value', scale:true, splitLine:{lineStyle:{color:'rgba(128,140,155,.15)'}},
+           axisLabel:{color:'#8b95a7', fontSize:11}},
+    series:[{
+      name:'收盘价', type:'line', data:closes, showSymbol:false, lineStyle:{width:2, color:'#3987e5'},
+      itemStyle:{color:'#3987e5'},
+      markPoint: m ? {symbol:'circle', symbolSize:9, itemStyle:{color:'#d95926'},
+        label:{show:true, formatter:p=>p.value, position:'top', color:'#d95926', fontSize:11},
+        data:[{coord:[dates[dates.length-1], m.pred], value:m.pred}]} : undefined,
+      markLine: m ? {silent:true, symbol:'none',
+        lineStyle:{color:'#d95926', type:'dashed', width:1},
+        label:{color:'#d95926', fontSize:10, position:'end'},
+        data:[{yAxis:m.lo80, label:{formatter:'80%下 '+m.lo80}},
+              {yAxis:m.hi80, label:{formatter:'80%上 '+m.hi80}}]} : undefined,
+    }]
+  };
+  if (m){
+    opt.series.push({
+      name:'月预测(20日均价)', type:'line', data:Array(dates.length-1).fill(null).concat([m.pred]),
+      symbol:'circle', symbolSize:8, itemStyle:{color:'#d95926'}, lineStyle:{width:0},
+      tooltip:{formatter:p=>`月预测 ${p.value}（80%区间 ${m.lo80}~${m.hi80}）`},
+    });
+    dates.push('+20日');
+    closes.push(null);
+    opt.xAxis.data = dates;
+    opt.series[0].data = closes;
+  }
+  chart.setOption(opt, true);
+}
+
+function renderTable(sb){
+  const rows = [...sb.rows].reverse();
+  const body = rows.map(r=>{
+    const d2e = r.d2 && r.d2.err!=null ? r.d2.err : '';
+    const d2c = d2e==='' ? '' : (+d2e)>=0 ? 'up' : 'dn';
+    const me = r.m && r.m.err!=null ? r.m.err : '';
+    const mc = me==='' ? '' : (+me)>=0 ? 'up' : 'dn';
+    const prog = r.m && r.m.prog!=null ? r.m.prog+'/20' : '';
+    const band = r.m && r.m.lo80!=null ? `${r.m.lo80}~${r.m.hi80}` : '';
+    return `<tr>
+      <td>${r.date}</td>
+      <td class="r">${r.open!=null?r.open:''}</td>
+      <td class="r">${r.close!=null?r.close:''}</td>
+      <td class="r">${r.d2&&r.d2.pred!=null?r.d2.pred:''}</td>
+      <td class="r ${d2c}">${d2e!==''?d2e:''}</td>
+      <td class="r">${r.m&&r.m.pred!=null?r.m.pred:''}</td>
+      <td class="r" style="opacity:.75">${band}</td>
+      <td class="r" style="opacity:.75">${prog}</td>
+      <td class="r ${mc}">${me!==''?me:''}</td></tr>`;
+  }).join('');
+  $('sbBody').innerHTML = body || '<tr><td colspan="9" class="mut">暂无数据</td></tr>';
+  const s = sb.summary||{};
+  $('sumline').textContent =
+    `次日(d2)：n=${s.nD??0}，MAE=${s.maeD??'—'}% · 月度(m/20日)：n=${s.nM??0}，MAE=${s.maeM??'—'}%` +
+    ` · 生成于 ${new Date((sb.generated_epoch||0)*1000).toLocaleString('zh-CN')}`;
+}
+
+// tabs
+const tabsEl = $('tabs');
+for (const [code,cfg] of Object.entries(SYMS)){
+  const b = document.createElement('button');
+  b.className = 'tab'; b.textContent = cfg.name;
+  if (cfg.disabled){ b.disabled = true; b.title = cfg.exch; }
+  else b.onclick = ()=>{ location.hash = code; };
+  b.dataset.code = code;
+  tabsEl.appendChild(b);
+}
+function syncTabs(){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.code===cur));
+}
+window.addEventListener('hashchange', ()=>{
+  const c = location.hash.slice(1);
+  if (SYMS[c] && !SYMS[c].disabled){ load(c).then(syncTabs); }
+});
+const init = location.hash.slice(1);
+if (SYMS[init] && !SYMS[init].disabled) cur = init;
+load(cur).then(syncTabs);
+window.addEventListener('resize', ()=>chart.resize());
+</script>
+</body>
+</html>
