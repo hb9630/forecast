@@ -20,7 +20,8 @@
               background:transparent; color:inherit; padding:6px 12px; font-size:13px; cursor:pointer; }
   #cards { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(430px,1fr)); }
   @media (max-width:480px){ #cards{grid-template-columns:1fr} }
-  .mbcard { background:#161d2b; border:1px solid #2a3444; border-radius:14px; padding:14px 16px 10px; }
+  .mbcard { background:#161d2b; border:1px solid #2a3444; border-radius:14px; padding:14px 16px 10px;
+            min-width:0; overflow:hidden; }
   :root[data-theme="light"] .mbcard { background:#fcfcfb; border-color:#dcdad3; }
   .mbhead { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; margin-bottom:2px; }
   .mbhead b { font-size:16.5px; }
@@ -29,13 +30,19 @@
   .mbhead .rt b { font-size:15px; font-variant-numeric:tabular-nums; }
   .mbchart { height:250px; }
   .mbsum { font-size:11.8px; opacity:.85; margin:2px 0 8px; line-height:1.6; }
-  .mbtblwrap { overflow-x:auto; }
+  /* 表体滚动（照玉米记分牌：sticky 表头+底汇总，卡内框住） */
+  .mbscroll { max-height:284px; overflow:auto; border:1px solid rgba(128,140,155,.22);
+              border-radius:8px; }
   table { width:100%; font-size:12.3px; white-space:nowrap; font-variant-numeric:tabular-nums;
-          border-collapse:collapse; }
-  thead tr { color:#8b95a7; font-size:11px; text-align:left; }
-  :root[data-theme="light"] thead tr { color:#52514e; }
-  th { padding:4px 10px 5px 0; }
-  td { padding:4.5px 10px 4.5px 0; border-top:1px solid rgba(128,140,155,.18); }
+          border-collapse:separate; border-spacing:0; }
+  thead th { position:sticky; top:0; z-index:2; background:#161d2b; color:#8b95a7; font-size:11px;
+             text-align:left; box-shadow: inset 0 -2px 0 rgba(128,140,155,.5); }
+  :root[data-theme="light"] thead th { background:#fcfcfb; color:#52514e; }
+  tfoot td { position:sticky; bottom:0; background:#161d2b; font-weight:700; font-size:11.5px;
+             box-shadow: inset 0 2px 0 rgba(128,140,155,.5); }
+  :root[data-theme="light"] tfoot td { background:#fcfcfb; }
+  th { padding:5px 10px; }
+  td { padding:4.5px 10px; border-bottom:1px solid rgba(128,140,155,.14); }
   .r { text-align:right; }
   .up { color:#ef4444; } .dn { color:#22c55e; }
   .dim { opacity:.6; font-size:11px; }
@@ -84,10 +91,11 @@ function cardHTML(code, cfg){
       <span class="rt" id="rt_${code}"></span></div>
     <div class="mbchart" id="ch_${code}"></div>
     <div class="mbsum" id="sum_${code}"></div>
-    <div class="mbtblwrap"><table>
+    <div class="mbscroll"><table>
       <thead><tr><th>日期</th><th class="r">收盘</th><th class="r">次日预测</th>
         <th class="r">月预测</th><th class="r">80%区间</th><th class="r">月误差%</th></tr></thead>
-      <tbody id="tb_${code}"></tbody></table></div></div>`;
+      <tbody id="tb_${code}"></tbody>
+      <tfoot id="tf_${code}"></tfoot></table></div></div>`;
 }
 
 function chartOpt(data){
@@ -164,8 +172,8 @@ async function renderCard(code){
   if (!tsum.live && ss.nM) sum += ` · 实盘 ${ss.nM} 笔 ${ss.maeM}%`;
   if (tsum.live && ss.nD) sum += ` · 次日实盘 ${ss.nD} 笔 ${ss.maeD}%`;
   document.getElementById('sum_'+code).innerHTML = sum;
-  // 表格（近 8 日）
-  document.getElementById('tb_'+code).innerHTML = rows.slice(-8).reverse().map(r=>{
+  // 表格（滚动区：全部实盘行，上限 60；底汇总照玉米记分牌）
+  document.getElementById('tb_'+code).innerHTML = rows.slice(-60).reverse().map(r=>{
     const m = r.m || {}, d2 = r.d2 || {};
     const e = m.err, ec = e==null ? '' : e>=0 ? 'up' : 'dn';
     const cell = e!=null ? `<span class="${ec}">${e}</span>`
@@ -177,6 +185,11 @@ async function renderCard(code){
       `<td class="r dim">${m.lo80!=null?`${m.lo80}–${m.hi80}`:'—'}</td>`+
       `<td class="r">${cell}</td></tr>`;
   }).join('');
+  document.getElementById('tf_'+code).innerHTML =
+    `<tr><td colspan="3">已兑现平均误差</td>`+
+    `<td class="r">${ss.nD?`${ss.nD} 笔 ${ss.maeD}%`:'—'}</td>`+
+    `<td class="r">${ss.nM?`${ss.nM} 笔`:'—'}</td>`+
+    `<td class="r">${ss.nM?`${ss.maeM}%`:'—'}</td></tr>`;
 }
 
 /* ============ 启动 ============ */
