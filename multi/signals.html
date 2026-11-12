@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<title>模拟持仓 · 多品种价格预测</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:#0e1420; color:#e6ebf2; }
+  .card { background:#161d2b; border:1px solid #2a3444; border-radius:12px; }
+  .wrap { max-width:1400px; margin:0 auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  h1 { font-size:20px; margin:0; font-weight:700; }
+  h1 small { font-size:13px; font-weight:400; opacity:.6; }
+  .tab { padding:5px 14px; border-radius:8px; border:1px solid rgba(128,140,155,.4);
+         background:transparent; color:inherit; cursor:pointer; font-size:14px; text-decoration:none; }
+  .tab.on { background:#3987e5; border-color:#3987e5; color:#fff; }
+  .tabs { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  table { border-collapse:separate; border-spacing:0; width:100%; font-size:13px;
+          font-variant-numeric:tabular-nums; }
+  th { position:sticky; top:0; z-index:2; text-align:left; padding:7px 12px; font-size:12px;
+       color:#8b95a7; background:#161d2b;
+       box-shadow: inset 0 -2px 0 rgba(128,140,155,.55); white-space:nowrap; }
+  .r { text-align:right; }
+  td { padding:5px 12px; border-bottom:1px solid rgba(128,140,155,.18); white-space:nowrap; }
+  .card h3 { margin:0; padding:14px 16px 4px; font-size:15px; }
+  .card h3 small { font-weight:400; opacity:.65; font-size:12.5px; }
+  #note { padding:4px 16px 12px; font-size:12.5px; opacity:.85; line-height:1.7; }
+  .up { color:#dc2626; } .dn { color:#16a34a; } .mut { opacity:.6; }
+  .pill { font-size:10px; padding:0 6px; border-radius:99px; border:1px solid rgba(128,140,155,.4);
+          color:#8b95a7; margin-left:6px; vertical-align:1px; }
+  .pill.open { color:#3987e5; border-color:#3987e5; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px;
+          padding:12px 16px 16px; }
+  .kpi { border:1px solid #2a3444; border-radius:10px; padding:10px 14px; }
+  .kpi h4 { margin:0 0 6px; font-size:14px; }
+  .kpi h4 span { font-size:11px; opacity:.55; font-weight:400; margin-left:4px; }
+  .kpi .big { font-size:19px; font-weight:700; }
+  .kpi .row { display:flex; justify-content:space-between; font-size:12px; opacity:.9; padding-top:2px; }
+  #sbWrap { max-height:480px; overflow:auto; }
+  footer { text-align:center; font-size:12px; opacity:.5; padding-bottom:20px; }
+  @media (max-width:640px){ .grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>模拟持仓 <small>· 纸上交易台账（公开审计）</small></h1>
+    <div class="tabs">
+      <a class="tab on" href="index.html">← 返回预测页</a>
+    </div>
+  </header>
+
+  <section class="card">
+    <h3>战绩汇总 <small>（月度独立口径：每月首个非观望信号，与策略回测同口径）</small></h3>
+    <div class="grid" id="kpis"><span class="mut" style="padding:6px 2px">加载中…</span></div>
+    <div id="note"></div>
+  </section>
+
+  <section class="card">
+    <h3>逐笔明细 <small>（最新在顶；多/空 = 月预测偏离收盘 ±1% 触发）</small></h3>
+    <div id="sbWrap">
+      <table>
+        <thead><tr>
+          <th>信号日</th><th>品种</th><th>信号</th>
+          <th class="r">月预测值</th><th class="r">信号日收盘</th>
+          <th>入场日</th><th class="r">入场价</th>
+          <th>平仓日</th><th class="r">平仓价</th>
+          <th class="r">盈亏%</th><th>状态</th>
+        </tr></thead>
+        <tbody id="sbBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>模拟持仓 · 信号当日 commit GitHub（时间戳=押题证明，事后不可篡改）· 实盘自 2026-11-12</footer>
+</div>
+
+<script>
+const NAMES = {C:'玉米', M:'豆粕', A:'豆一', L:'生猪', CS:'淀粉'};
+const $ = id => document.getElementById(id);
+const D = (x, d=1) => (x===''||x==null) ? '—' : (+x).toFixed(d);
+async function j(url){ try { return await (await fetch(`${url}?v=${Date.now()}`)).json(); } catch(e){ return null; } }
+
+function kpi(code, s){
+  const pos = s.cum_monthly >= 0;
+  return `<div class="kpi"><h4>${NAMES[code]||code}<span>${code}</span></h4>
+    <div class="big ${pos?'up':'dn'}">${s.cum_monthly>=0?'+':''}${D(s.cum_monthly,2)}%</div>
+    <div class="row"><span>月度独立 ${s.n_monthly} 笔</span><span>胜率 ${D(s.win_monthly,1)}%</span></div>
+    <div class="row"><span>均值 ${D(s.avg_monthly,3)}%</span><span>最大回撤 ${D(s.maxdd_monthly,2)}%</span></div>
+    <div class="row mut"><span>全量 ${s.n_all} 笔 · 胜率 ${D(s.win_all,1)}% · 均值 ${D(s.avg_all,3)}%</span></div>
+    <div class="row mut"><span>自 ${s.since}</span></div></div>`;
+}
+
+function row(r){
+  const sigCls = r.signal==='多' ? 'up' : r.signal==='空' ? 'dn' : 'mut';
+  const hasEntry = r.entry_px !== '' && r.entry_px != null;
+  let st, cls='';
+  if (r.signal === '观望'){ st = '观望'; }
+  else if (r.status === 'settled'){ st = '已平仓'; }
+  else if (hasEntry){ st = '持仓中'; cls='open'; }
+  else { st = '待入场'; }
+  const pnl = r.pnl_pct === '' || r.pnl_pct == null ? null : +r.pnl_pct;
+  const pnlCls = pnl==null ? '' : pnl>0 ? 'up' : pnl<0 ? 'dn' : 'mut';
+  return `<tr>
+    <td>${r.open_date}</td>
+    <td>${NAMES[r.code]||r.code}<span class="mut" style="font-size:11px"> ${r.code}</span></td>
+    <td class="${sigCls}" style="font-weight:600">${r.signal}</td>
+    <td class="r">${D(r.pred)}</td>
+    <td class="r">${D(r.close_at)}</td>
+    <td>${r.entry_date||'—'}</td>
+    <td class="r">${hasEntry?D(r.entry_px):'—'}</td>
+    <td>${r.settle_date||'—'}</td>
+    <td class="r">${r.settle_px!==''&&r.settle_px!=null?D(r.settle_px):'—'}</td>
+    <td class="r ${pnlCls}">${pnl==null?'—':(pnl>0?'+':'')+D(pnl,3)}</td>
+    <td>${st}${cls?'<span class="pill open">live</span>':''}</td></tr>`;
+}
+
+(async () => {
+  const [sum, led] = await Promise.all([j('signals_summary.json'), j('signals_ledger.json')]);
+  const rows = Array.isArray(led) ? led : [];
+  $('sbBody').innerHTML = rows.slice().sort((a,b)=>b.open_date.localeCompare(a.open_date)||b.code.localeCompare(a.code)).map(row).join('')
+    || '<tr><td colspan="11" class="mut">暂无信号</td></tr>';
+  const ks = Object.entries(sum||{});
+  $('kpis').innerHTML = ks.length ? ks.map(([c,s])=>kpi(c,s)).join('')
+    : '<span class="mut" style="padding:6px 2px">暂无已平仓战绩（首笔信号 2026-11-12，t+21 开盘平仓后结算）</span>';
+  $('note').innerHTML = '口径：t 收盘出信号 → t+1 开盘入场 → t+21 开盘平仓，成本 0.15%/笔 · '
+    + '阈值：|月预测 − 收盘|/收盘 &gt; 1% 记多/空，否则观望（记 0 盈亏） · '
+    + '入场/平仓信息由结算器按信号日锚定回填（信号日不可知未来价格）';
+})();
+</script>
+</body>
+</html>
