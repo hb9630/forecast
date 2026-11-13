@@ -67,7 +67,7 @@
           <th>信号日</th><th>品种</th><th>信号</th>
           <th class="r">月预测值</th><th class="r">信号日收盘</th>
           <th>入场日</th><th class="r">入场价</th>
-          <th>平仓日</th><th class="r">平仓价</th>
+          <th>结算日</th><th class="r">结算均价</th>
           <th class="r">盈亏%</th><th>状态</th>
         </tr></thead>
         <tbody id="sbBody"></tbody>
@@ -126,7 +126,7 @@ function row(r){
   const ks = Object.entries(sum||{});
   $('kpis').innerHTML = ks.length ? ks.map(([c,s])=>kpi(c,s)).join('')
     : '<span class="mut" style="padding:6px 2px">暂无已平仓战绩（首笔信号 2026-11-12，t+21 开盘平仓后结算）</span>';
-  $('note').innerHTML = '口径：t 收盘出信号 → t+1 开盘入场 → t+21 开盘平仓，成本 0.15%/笔 · '
+  $('note').innerHTML = '口径：t 收盘出信号 → t+1 开盘入场 → 持有期 20 日收盘均价平仓，成本 0.15%/笔 · '
     + '阈值：|月预测 − 收盘|/收盘 &gt; 1% 记多/空，否则观望（记 0 盈亏） · '
     + '入场/平仓信息由结算器按信号日锚定回填（信号日不可知未来价格）';
 })();
