@@ -99,7 +99,7 @@ function row(r){
   const sigCls = r.signal==='多' ? 'up' : r.signal==='空' ? 'dn' : 'mut';
   const hasEntry = r.entry_px !== '' && r.entry_px != null;
   let st, cls='';
-  // 观望=零仓对照,状态同走生命周期(React 版对齐)
+  if (r.signal === '观望'){ st = '观望'; }   // 观望=不交易
   else if (r.status === 'settled'){ st = '已平仓'; }
   else if (hasEntry){ st = '持仓中'; cls='open'; }
   else { st = '待入场'; }
