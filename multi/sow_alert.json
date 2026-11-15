@@ -1,0 +1,6 @@
+{
+ "checked": "2026-11-15 01:30:00",
+ "latest_have": "2026-09",
+ "missing_quarters": [],
+ "hint": "从统计局季报/农业农村部发布会转载（澎湃/搜狐财经）摘\"能繁母猪存栏 X 万头\"，执行: sow.py add YYYY-MM 数值 --source 来源"
+}
